@@ -4,7 +4,9 @@
 
 ScoreMind Core currently relies on MusicXML because it is structured, symbolic, and reliable for deterministic analysis. It preserves pitches, durations, measures, offsets, and other musical structure that the backend can inspect without guessing from pixels.
 
-Real users often have PDF, image, screenshot, scanned-paper, or notation-software project files rather than raw MusicXML. This document evaluates future input expansion options without implementing them in MVP 2.5.
+Real users often have PDF, image, screenshot, scanned-paper, or notation-software project files rather than raw MusicXML. This document evaluates future input expansion options without implementing them in MVP 2.8.
+
+MVP 2.8 adds a Score Input Workspace for user-facing source guidance and keeps isolated OMR feasibility work in research. See `docs/OMR_EXPERIMENT.md` for the experiment plan, evaluation criteria, failure cases, and decision gates. This is research only; it is not product integration.
 
 ## B. Candidate Input Paths
 
@@ -82,7 +84,7 @@ Risks:
 
 MVP suitability: research only.
 
-Recommended status: research only.
+Recommended status: active research in MVP 2.8, outside the runtime product.
 
 ### Future Native PDF/Image Upload
 
@@ -158,9 +160,11 @@ Long term:
 
 - Native PDF/image pipeline.
 
-## G. Decision For MVP 2.5
+## G. Decision For MVP 2.8
 
 - No runtime input expansion.
 - No upload format changes.
 - No OMR integration.
+- Isolated OMR feasibility research only.
+- Score Input Workspace provides guidance only.
 - Keep MusicXML Core stable.

@@ -1,6 +1,12 @@
 # Roadmap
 
-This roadmap describes future work. Items listed here are not current MVP 2.5 capabilities unless explicitly implemented elsewhere.
+This roadmap describes future work. Items listed here are not current MVP 2.8 capabilities unless explicitly implemented elsewhere.
+
+## Current / Completed
+
+- Score Input Workspace for explaining supported and unsupported score sources.
+- Runtime MusicXML/XML upload and deterministic analysis.
+- Isolated OMR feasibility research outside the production app.
 
 ## Near Term
 
@@ -10,6 +16,7 @@ This roadmap describes future work. Items listed here are not current MVP 2.5 ca
 - Add Learning Report download as a file.
 - Add more small validation fixtures.
 - Add screenshot-based demo documentation.
+- Run isolated OMR feasibility experiments outside the production app.
 
 ## Mid Term
 
@@ -31,4 +38,4 @@ This roadmap describes future work. Items listed here are not current MVP 2.5 ca
 
 ## Current Boundary
 
-The current system is MusicXML/XML only. It does not perform OMR, local modulation, passing tone detection, neighbor tone detection, full sustained harmony inference, melody analysis, voice-leading analysis, or jazz/modern harmony analysis.
+The current system is MusicXML/XML only. MVP 2.8 includes a Score Input Workspace and active OMR feasibility research, but the runtime app still does not perform OMR, PDF/image upload, MIDI/audio analysis, local modulation, passing tone detection, neighbor tone detection, full sustained harmony inference, melody analysis, voice-leading analysis, or jazz/modern harmony analysis.

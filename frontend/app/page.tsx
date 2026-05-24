@@ -91,6 +91,22 @@ type NoteSummary = {
 
 type AnalysisView = "student" | "technical";
 
+type InputSourceId =
+  | "musicxml"
+  | "notation"
+  | "pdf"
+  | "image"
+  | "scan"
+  | "midi_audio";
+
+type InputSourceOption = {
+  id: InputSourceId;
+  label: string;
+  status: string;
+  statusClass: "supported" | "export" | "unsupported";
+  message: string;
+};
+
 type StudentSummary = {
   keySummary: string;
   chordLines: string[];
@@ -125,6 +141,52 @@ const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ?? "http://127.0.0.1:8000";
 
 const SUPPORTED_EXTENSIONS = [".musicxml", ".xml"];
+
+const INPUT_SOURCE_OPTIONS: InputSourceOption[] = [
+  {
+    id: "musicxml",
+    label: "MusicXML / XML",
+    status: "Supported now",
+    statusClass: "supported",
+    message: "Upload .musicxml or .xml directly.",
+  },
+  {
+    id: "notation",
+    label: "MuseScore / notation software",
+    status: "Export first",
+    statusClass: "export",
+    message: "Export your score as MusicXML/XML, then upload it to ScoreMind.",
+  },
+  {
+    id: "pdf",
+    label: "PDF score",
+    status: "Not supported yet",
+    statusClass: "unsupported",
+    message:
+      "PDF input requires OMR. OMR is currently research-only because recognition errors can corrupt downstream analysis.",
+  },
+  {
+    id: "image",
+    label: "Image / screenshot",
+    status: "Not supported yet",
+    statusClass: "unsupported",
+    message: "Image input requires OMR and correction workflow. Current MVP does not process image files.",
+  },
+  {
+    id: "scan",
+    label: "Scanned paper score",
+    status: "Not supported yet",
+    statusClass: "unsupported",
+    message: "Scanned scores are long-term input expansion work and are not accepted by the runtime product.",
+  },
+  {
+    id: "midi_audio",
+    label: "MIDI / audio",
+    status: "Not supported",
+    statusClass: "unsupported",
+    message: "ScoreMind currently analyzes symbolic notation data, not performance or audio input.",
+  },
+];
 
 const LEARNING_HINTS = [
   "先看调性，再看每小节和弦，再看音符是否属于当前和声。",
@@ -195,6 +257,7 @@ export default function Home() {
   const [noteRoleFilter, setNoteRoleFilter] = useState<NoteRoleFilter>("all");
   const [noteContextFilter, setNoteContextFilter] = useState<NoteContextFilter>("all");
   const [analysisView, setAnalysisView] = useState<AnalysisView>("student");
+  const [inputSource, setInputSource] = useState<InputSourceId>("musicxml");
   const [error, setError] = useState<string | null>(null);
 
   const detectedChordCount = useMemo(() => {
@@ -248,6 +311,8 @@ export default function Home() {
     }
     return buildStudentSummary(analysis);
   }, [analysis]);
+
+  const selectedInputSource = INPUT_SOURCE_OPTIONS.find((option) => option.id === inputSource) ?? INPUT_SOURCE_OPTIONS[0];
 
   useEffect(() => {
     if (!musicXmlText || !scoreContainerRef.current) {
@@ -455,7 +520,7 @@ export default function Home() {
       <section className="workspace">
         <header className="page-header">
           <div>
-            <p className="eyebrow">MVP 2.6.1</p>
+            <p className="eyebrow">MVP 2.8</p>
             <h1>ScoreMind</h1>
             <p className="product-subtitle">AI Music Score Understanding</p>
           </div>
@@ -465,25 +530,83 @@ export default function Home() {
         <section className="panel">
           <div className="panel-header">
             <div>
-              <h2>Upload & Score Preview</h2>
+              <h2>Score Input Workspace</h2>
               <p className="panel-note">
-                Upload an already-digitized MusicXML/XML score. Preview is rendered from MusicXML; it is not OMR.
+                ScoreMind currently analyzes structured MusicXML. Other score sources are part of the input expansion roadmap, but they are not runtime features yet.
               </p>
             </div>
           </div>
 
-          <form className="upload-row" onSubmit={handleAnalyze}>
-            <label className="file-control">
-              <span>MusicXML / XML</span>
-              <input ref={fileInputRef} type="file" accept=".musicxml,.xml" onChange={handleFileChange} />
-            </label>
-            <button type="submit" disabled={!file || loadingAnalysis}>
-              {loadingAnalysis ? "Analyzing..." : "Analyze"}
-            </button>
-            <button type="button" className="secondary-button" onClick={resetState}>
-              Reset
-            </button>
-          </form>
+          <div className="input-workspace">
+            <div className="input-source-list" aria-label="Score source selector">
+              {INPUT_SOURCE_OPTIONS.map((option) => (
+                <button
+                  key={option.id}
+                  type="button"
+                  className={`input-source-option ${inputSource === option.id ? "active" : ""}`}
+                  onClick={() => setInputSource(option.id)}
+                >
+                  <span>{option.label}</span>
+                  <strong className={`source-status ${option.statusClass}`}>{option.status}</strong>
+                </button>
+              ))}
+            </div>
+
+            <div className="input-guidance-card">
+              <div className="source-heading">
+                <div>
+                  <h3>{selectedInputSource.label}</h3>
+                  <p>{selectedInputSource.message}</p>
+                </div>
+                <span className={`source-status large ${selectedInputSource.statusClass}`}>
+                  {selectedInputSource.status}
+                </span>
+              </div>
+
+              {selectedInputSource.id === "musicxml" ? (
+                <>
+                  <form className="upload-row" onSubmit={handleAnalyze}>
+                    <label className="file-control">
+                      <span>MusicXML / XML</span>
+                      <input ref={fileInputRef} type="file" accept=".musicxml,.xml" onChange={handleFileChange} />
+                    </label>
+                    <button type="submit" disabled={!file || loadingAnalysis}>
+                      {loadingAnalysis ? "Analyzing..." : "Analyze"}
+                    </button>
+                    <button type="button" className="secondary-button" onClick={resetState}>
+                      Reset
+                    </button>
+                  </form>
+
+                  <div className="sample-links-panel">
+                    <h3>Try sample files</h3>
+                    <p>No MusicXML file yet? Download a sample score and upload it to try the demo.</p>
+                    <ul>
+                      <li>
+                        <a href="/samples/c_major_progression.musicxml" download>
+                          C major progression sample
+                        </a>
+                        : demonstrates key, Roman numerals, harmonic functions, and Measure Walkthrough.
+                      </li>
+                      <li>
+                        <a href="/samples/carried_context_notes.musicxml" download>
+                          Carried context note-level sample
+                        </a>
+                        : demonstrates note-level chord tone labels and carried previous chord context.
+                      </li>
+                    </ul>
+                  </div>
+                </>
+              ) : (
+                <div className="unsupported-source-note">
+                  <p>
+                    This source is guidance-only in MVP 2.8. The runtime upload control still accepts only
+                    {" "}.musicxml and .xml files after you export or convert externally.
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
 
           {file && (
             <div className="score-preview-wrap">
@@ -501,34 +624,6 @@ export default function Home() {
               <li>This is a deterministic MusicXML score understanding demo for music students.</li>
               <li>It helps students read chord, key, Roman numeral, harmonic function, and note-level harmony relationships.</li>
               <li>It does not support PDF/image/OMR or real LLM reasoning yet.</li>
-            </ul>
-          </div>
-          <div className="info-panel">
-            <h2>Input Guidance</h2>
-            <ul>
-              <li>Current MVP accepts .musicxml and .xml only.</li>
-              <li>If you use MuseScore or notation software, export the score as MusicXML/XML before uploading.</li>
-              <li>PDF, image, screenshot, and scanned-paper upload are not supported yet.</li>
-              <li>Future work may explore OMR and PDF/image conversion, but MVP 2.6.1 does not implement conversion.</li>
-              <li>See docs/INPUT_EXPANSION.md for user guidance and docs/INPUT_RESEARCH.md for research notes.</li>
-            </ul>
-          </div>
-          <div className="info-panel">
-            <h2>Try sample files</h2>
-            <p className="panel-note">No MusicXML file yet? Download a sample score and upload it to try the demo.</p>
-            <ul>
-              <li>
-                <a href="/samples/c_major_progression.musicxml" download>
-                  C major progression sample
-                </a>
-                : demonstrates key, Roman numerals, harmonic functions, and Measure Walkthrough.
-              </li>
-              <li>
-                <a href="/samples/carried_context_notes.musicxml" download>
-                  Carried context note-level sample
-                </a>
-                : demonstrates note-level chord tone labels and carried previous chord context.
-              </li>
             </ul>
           </div>
           <div className="info-panel">
