@@ -837,6 +837,16 @@ tr:last-child td {
   line-height: 1.45;
 }
 
+.report-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.report-disclaimer {
+  margin-top: 10px;
+  font-size: 13px;
+}
+
 .copy-message {
   margin: 10px 0 0;
   color: var(--muted);

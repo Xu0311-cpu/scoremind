@@ -278,7 +278,7 @@ def test_api_analyze_musicxml_returns_structured_json() -> None:
     payload = response.json()
     assert payload["file_name"] == "simple_chords.musicxml"
     assert payload["measure_count"] == 4
-    assert payload["analysis_version"] == "2.8.0"
+    assert payload["analysis_version"] == "2.9.0"
     assert payload["analysis_scope"] == [
         "musicxml_input_only",
         "same_offset_vertical_pitch_set",
@@ -288,12 +288,12 @@ def test_api_analyze_musicxml_returns_structured_json() -> None:
         "carried_previous_chord_within_measure",
     ]
     assert payload["key_analysis"]["tonic"] is not None
-    assert "MVP 2.8 detects chords only from simultaneous pitch sets at identical offsets." in payload["warnings"]
+    assert "MVP 2.9 detects chords only from simultaneous pitch sets at identical offsets." in payload["warnings"]
     assert "Roman numeral analysis is based only on the detected global key." in payload["warnings"]
     assert "No local modulation or secondary dominant analysis is performed." in payload["warnings"]
     assert "Harmonic function labels are basic MVP classifications." in payload["warnings"]
     assert (
-        "MVP 2.8 note-level analysis prefers same-offset harmony, then may use carried previous chord context within the same measure."
+        "MVP 2.9 note-level analysis prefers same-offset harmony, then may use carried previous chord context within the same measure."
     ) in payload["warnings"]
     assert "Carried harmony context is a conservative MVP approximation." in payload["warnings"]
     assert "It does not perform full sustained harmony, phrase-level harmony, or voice-leading analysis." in payload["warnings"]
@@ -469,13 +469,13 @@ def test_explain_analysis_returns_template_explanation_for_valid_analysis_json()
 
     assert explanation_response.status_code == 200
     payload = explanation_response.json()
-    assert payload["analysis_version"] == "2.8.0"
-    assert payload["explanation_version"] == "2.8.0"
+    assert payload["analysis_version"] == "2.9.0"
+    assert payload["explanation_version"] == "2.9.0"
     assert payload["language"] == "zh-CN"
     assert payload["level"] == "student"
     assert "C major" in payload["summary"]
     assert "This explanation is template-generated from deterministic analysis output." in payload["warnings"]
-    assert "No LLM is called in MVP 2.8." in payload["warnings"]
+    assert "No LLM is called in MVP 2.9." in payload["warnings"]
     assert "Future LLM providers must not infer new music-theory conclusions." in payload["warnings"]
     assert "Roman numeral analysis is based only on the detected global key." in payload["warnings"]
 
@@ -625,4 +625,4 @@ def test_api_invalid_file_extension_returns_400() -> None:
     )
 
     assert response.status_code == 400
-    assert response.json()["detail"] == "Only .musicxml and .xml files are supported in MVP 2.8."
+    assert response.json()["detail"] == "Only .musicxml and .xml files are supported in MVP 2.9."

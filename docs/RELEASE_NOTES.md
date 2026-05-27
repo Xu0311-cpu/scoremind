@@ -1,12 +1,31 @@
-# MVP 2.5 Release Notes
+# MVP 2.9 Release Notes
 
 ## Release Purpose
 
-MVP 2.5 prepares ScoreMind / AI Music Score Understanding for GitHub and portfolio presentation. The release focuses on documentation, demo readiness, and clear product framing. It does not add new runtime product features.
+MVP 2.9 adds a Download Learning Report action that saves the generated Markdown Learning Report as a local `.md` file. The backend analysis behavior is unchanged from MVP 2.8. No new analysis capabilities, PDF export, or extra AI reasoning are added.
+
+## What Changed
+
+- Added a `Download Learning Report` button next to `Copy Learning Report` in the Export Learning Report section.
+- The download saves the current Markdown report as a `.md` file using browser Blob and `URL.createObjectURL`.
+- Filename is derived from the uploaded file name (e.g., `c_major_progression.musicxml` produces `c_major_progression-learning-report.md`), with a fallback of `scoremind-learning-report.md`.
+- Added a UI note near report actions: "The report is generated from deterministic backend analysis only. No PDF export or extra AI reasoning is added."
+- All version strings updated to 2.9.0.
+
+## What Did Not Change
+
+- Backend analysis algorithms are unchanged.
+- Supported upload formats remain `.musicxml` and `.xml` only.
+- PDF/image/OMR upload is still not supported.
+- No real LLM/OpenAI integration.
+- No database, authentication, or user accounts.
+- Expert Review is not reintroduced.
+- Score Input Workspace and OMR research remain as in MVP 2.8.
 
 ## Current Capabilities
 
 - Upload `.musicxml` and `.xml` files.
+- Use the Score Input Workspace to understand supported and unsupported score sources.
 - Render a MusicXML score preview in the frontend.
 - Run deterministic backend analysis for:
   - basic triads and seventh chords
@@ -17,6 +36,8 @@ MVP 2.5 prepares ScoreMind / AI Music Score Understanding for GitHub and portfol
   - carried previous chord context within a measure
 - Show Student Analysis, Process Explanation, Measure Walkthrough, Terminology Guide, and Technical Evidence.
 - Generate a Markdown Learning Report.
+- Copy the Learning Report to clipboard.
+- Download the Learning Report as a `.md` file.
 - Download demo MusicXML sample files from the frontend.
 
 ## Intentionally Unsupported
@@ -74,12 +95,12 @@ The frontend sample links are download links only. Users still upload the downlo
 Backend test suite:
 
 - `pytest`
-- Expected status for MVP 2.5: all tests passing.
+- Expected status for MVP 2.9: all tests passing.
 
 Frontend build:
 
 - `npm run build`
-- Expected status for MVP 2.5: build passing.
+- Expected status for MVP 2.9: build passing.
 
 Validation documentation:
 
@@ -98,4 +119,4 @@ Validation documentation:
 
 ## Future Roadmap
 
-See `docs/ROADMAP.md` for future work. Future items are not current MVP 2.5 capabilities unless explicitly implemented in the application.
+See `docs/ROADMAP.md` for future work. Future items are not current MVP 2.9 capabilities unless explicitly implemented in the application.

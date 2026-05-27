@@ -515,12 +515,30 @@ export default function Home() {
     }
   }
 
+  function handleDownloadReport() {
+    if (!markdownReport) {
+      return;
+    }
+    const blob = new Blob([markdownReport], { type: "text/markdown;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    const baseName = file?.name
+      ? file.name.replace(/\.(musicxml|xml)$/i, "")
+      : null;
+    anchor.href = url;
+    anchor.download = baseName ? `${baseName}-learning-report.md` : "scoremind-learning-report.md";
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+    URL.revokeObjectURL(url);
+  }
+
   return (
     <main className="page-shell">
       <section className="workspace">
         <header className="page-header">
           <div>
-            <p className="eyebrow">MVP 2.8</p>
+            <p className="eyebrow">MVP 2.9</p>
             <h1>ScoreMind</h1>
             <p className="product-subtitle">AI Music Score Understanding</p>
           </div>
@@ -600,7 +618,7 @@ export default function Home() {
               ) : (
                 <div className="unsupported-source-note">
                   <p>
-                    This source is guidance-only in MVP 2.8. The runtime upload control still accepts only
+                    This source is guidance-only in MVP 2.9. The runtime upload control still accepts only
                     {" "}.musicxml and .xml files after you export or convert externally.
                   </p>
                 </div>
@@ -1131,10 +1149,18 @@ export default function Home() {
               <div className="report-block">
                 <div className="panel-header">
                   <h3>Learning Report</h3>
-                  <button type="button" className="secondary-button" onClick={handleCopyReport}>
-                    Copy Learning Report
-                  </button>
+                  <div className="report-actions">
+                    <button type="button" className="secondary-button" onClick={handleCopyReport}>
+                      Copy Learning Report
+                    </button>
+                    <button type="button" className="secondary-button" onClick={handleDownloadReport}>
+                      Download Learning Report
+                    </button>
+                  </div>
                 </div>
+                <p className="panel-note report-disclaimer">
+                  The report is generated from deterministic backend analysis only. No PDF export or extra AI reasoning is added.
+                </p>
                 {copyMessage && <p className="copy-message">{copyMessage}</p>}
                 <textarea readOnly value={markdownReport} rows={18} aria-label="Generated learning report" />
               </div>
