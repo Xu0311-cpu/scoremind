@@ -349,7 +349,7 @@ export default function Home() {
       } catch {
         if (!cancelled) {
           container.innerHTML = "";
-          setScoreRenderError("Score rendering failed, but analysis may still work.");
+          setScoreRenderError("Score preview could not be rendered, but analysis may still work. / 乐谱预览渲染失败，但分析可能仍可进行。");
         }
       } finally {
         if (!cancelled) {
@@ -369,7 +369,7 @@ export default function Home() {
     const selectedFile = event.target.files?.[0] ?? null;
     if (selectedFile && !isSupportedFile(selectedFile.name)) {
       resetState();
-      setError("Unsupported file type. Please select a .musicxml or .xml file.");
+      setError("This file type is not supported. Please upload a .musicxml or .xml file. / 不支持此文件类型，请上传 .musicxml 或 .xml 文件。");
       return;
     }
 
@@ -394,14 +394,14 @@ export default function Home() {
     try {
       setMusicXmlText(await selectedFile.text());
     } catch {
-      setScoreRenderError("Score rendering failed, but analysis may still work.");
+      setScoreRenderError("Score preview could not be rendered, but analysis may still work. / 乐谱预览渲染失败，但分析可能仍可进行。");
     }
   }
 
   async function handleAnalyze(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!file) {
-      setError("请选择 .musicxml 或 .xml 文件。");
+      setError("Please select a .musicxml or .xml file first. / 请先选择 .musicxml 或 .xml 文件。");
       return;
     }
 
@@ -423,12 +423,12 @@ export default function Home() {
         body: formData,
       });
       if (!response.ok) {
-        throw new Error(await getApiErrorMessage(response, "分析失败。"));
+        throw new Error(await getApiErrorMessage(response, "Analysis failed. Please check the file and try again. / 分析失败，请检查文件后重试。"));
       }
       const payload = await response.json();
       setAnalysis(payload);
     } catch (err) {
-      setError(formatRequestError(err, "分析失败。"));
+      setError(formatRequestError(err, "Analysis failed. Please check the file and try again. / 分析失败，请检查文件后重试。"));
     } finally {
       setLoadingAnalysis(false);
     }
@@ -458,12 +458,12 @@ export default function Home() {
         }),
       });
       if (!response.ok) {
-        throw new Error(await getApiErrorMessage(response, "解释生成失败。"));
+        throw new Error(await getApiErrorMessage(response, "Explanation generation failed. Please try again. / 解释生成失败，请重试。"));
       }
       const payload = await response.json();
       setExplanation(payload);
     } catch (err) {
-      setError(formatRequestError(err, "解释生成失败。"));
+      setError(formatRequestError(err, "Explanation generation failed. Please try again. / 解释生成失败，请重试。"));
     } finally {
       setLoadingExplanation(false);
     }
@@ -503,14 +503,14 @@ export default function Home() {
       return;
     }
     if (!navigator.clipboard) {
-      setCopyMessage("Clipboard is unavailable. Please copy the report manually.");
+      setCopyMessage("Clipboard is not available in this browser. Please select and copy the report text manually. / 此浏览器不支持剪贴板，请手动选择并复制报告内容。");
       return;
     }
     try {
       await navigator.clipboard.writeText(markdownReport);
-      setCopyMessage("Learning report copied to clipboard.");
+      setCopyMessage("Learning report copied to clipboard. / 学习报告已复制到剪贴板。");
     } catch {
-      setCopyMessage("Clipboard is unavailable. Please copy the report manually.");
+      setCopyMessage("Clipboard is not available in this browser. Please select and copy the report text manually. / 此浏览器不支持剪贴板，请手动选择并复制报告内容。");
     }
   }
 
@@ -537,7 +537,7 @@ export default function Home() {
       <section className="workspace">
         <header className="page-header">
           <div>
-            <p className="eyebrow">MVP 3.0</p>
+            <p className="eyebrow">MVP 3.1</p>
             <h1>ScoreMind</h1>
             <p className="product-subtitle">AI Music Score Understanding</p>
           </div>
@@ -617,7 +617,7 @@ export default function Home() {
               ) : (
                 <div className="unsupported-source-note">
                   <p>
-                    This source is guidance-only in MVP 3.0. The runtime upload control still accepts only
+                    This source is guidance-only in MVP 3.1. The runtime upload control still accepts only
                     {" "}.musicxml and .xml files after you export or convert externally.
                   </p>
                 </div>
@@ -627,7 +627,7 @@ export default function Home() {
 
           {file && (
             <div className="score-preview-wrap">
-              {renderingScore && <p className="empty-state">Rendering score preview...</p>}
+              {renderingScore && <p className="empty-state">Rendering score preview... / 正在渲染乐谱预览...</p>}
               {scoreRenderError && <div className="inline-warning">{scoreRenderError}</div>}
               <div ref={scoreContainerRef} className="score-preview" aria-label="Rendered MusicXML score preview" />
             </div>
@@ -953,7 +953,7 @@ export default function Home() {
                     ))}
                   </div>
                 ) : (
-                  <p className="empty-state">No measure-level chord analysis returned.</p>
+                  <p className="empty-state">No chord analysis was returned for this score. / 此乐谱未返回和弦分析结果。</p>
                 )}
 
                 <h3>Note-Level Analysis</h3>
@@ -1080,9 +1080,9 @@ export default function Home() {
                     })}
                   </div>
                 ) : measuresWithAnalyzedNotes.length > 0 ? (
-                  <p className="empty-state">No notes match the current filters.</p>
+                  <p className="empty-state">No notes match the current filters. Try changing the filter settings. / 没有音符匹配当前筛选条件，请尝试调整筛选设置。</p>
                 ) : (
-                  <p className="empty-state">No note-level analysis returned.</p>
+                  <p className="empty-state">No note-level analysis was returned for this score. / 此乐谱未返回音符级分析结果。</p>
                 )}
 
                 <h3>Warnings / Validation Hints</h3>
@@ -1238,7 +1238,7 @@ function isDetailResponse(value: unknown): value is { detail: unknown } {
 
 function formatRequestError(error: unknown, fallback: string) {
   if (error instanceof TypeError) {
-    return `Cannot reach backend at ${API_BASE_URL}. Make sure FastAPI is running.`;
+    return `Cannot reach the backend at ${API_BASE_URL}. Please make sure the FastAPI server is running. / 无法连接到后端 ${API_BASE_URL}，请确认 FastAPI 服务已启动。`;
   }
   if (error instanceof Error) {
     return error.message;

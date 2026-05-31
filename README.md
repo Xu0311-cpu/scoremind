@@ -1,10 +1,10 @@
-# ScoreMind — AI Music Score Understanding (MVP 3.0)
+# ScoreMind — AI Music Score Understanding (MVP 3.1)
 
 ScoreMind is a deterministic MusicXML score understanding tool for music students. It parses symbolic score data, analyzes basic harmony and note-level chord membership, renders a score preview, and turns the result into student-friendly learning views.
 
-Current release: MVP 3.0. Current uploads remain limited to `.musicxml` and `.xml`.
+Current release: MVP 3.1. Current uploads remain limited to `.musicxml` and `.xml`.
 
-MVP 3.0 polishes the Score Input Workspace so it is clearer and easier for real users to understand. Supported, export-first, research-only, and out-of-scope paths are now visually distinct. No new runtime input capability was added. Runtime uploads remain limited to `.musicxml` and `.xml`.
+MVP 3.1 polishes error messages and empty states so ScoreMind feels more robust and understandable when users make mistakes or the backend is unavailable. Error messages are now bilingual and student-friendly. Empty states provide clearer guidance. No new analysis capability was added.
 
 ## Why I Built This
 
@@ -104,11 +104,11 @@ ScoreMind demonstrates an AI product architecture where domain reasoning is dete
 - If you use MuseScore or notation software, export MusicXML/XML first, then upload.
 - If you only have PDF, image, screenshot, or scanned paper, convert externally to MusicXML before using this MVP.
 - The Score Input Workspace explains these paths in the frontend, but it does not add PDF/image/MIDI/audio upload.
-- Input conversion is future work. MVP 3.0 keeps the runtime upload path limited to MusicXML/XML.
+- Input conversion is future work. MVP 3.1 keeps the runtime upload path limited to MusicXML/XML.
 
 ## Sample Files
 
-MVP 3.0 includes downloadable demo MusicXML files in `frontend/public/samples`:
+MVP 3.1 includes downloadable demo MusicXML files in `frontend/public/samples`:
 
 - `frontend/public/samples/c_major_progression.musicxml`: demonstrates global key, Roman numerals, harmonic functions, and Measure Walkthrough.
 - `frontend/public/samples/carried_context_notes.musicxml`: demonstrates note-level chord-tone labels and carried previous chord context.
@@ -119,7 +119,7 @@ In the frontend, use the `Try sample files` panel to download a sample, then upl
 
 - Backend deterministic analysis remains the source of truth.
 - Student Analysis is computed only from existing backend analysis JSON and does not infer new conclusions.
-- MusicXML/XML remains the only runtime input path in MVP 3.0.
+- MusicXML/XML remains the only runtime input path in MVP 3.1.
 - OMR feasibility work lives only in `docs/OMR_EXPERIMENT.md` and `experiments/omr`.
 - Input conversion, real LLM explanation, and advanced music-theory analysis are future work.
 
@@ -193,4 +193,4 @@ Validation docs:
 
 ## Limitations
 
-MVP 3.0 renders MusicXML only and does not use an LLM. It still does not support PDF/image/OMR, `.mxl`, audio, MIDI, local modulation, passing tone detection, neighbor tone detection, full sustained harmony inference, phrase-level harmony, full non-chord tone analysis, melody/voice-leading analysis, or jazz/modern harmony. OMR work remains isolated research only and does not add runtime input support. Sample files are for demo use only and do not add conversion support. Expert Review is not part of the core UI. Backend analysis behavior is unchanged in MVP 3.0.
+MVP 3.1 renders MusicXML only and does not use an LLM. It still does not support PDF/image/OMR, `.mxl`, audio, MIDI, local modulation, passing tone detection, neighbor tone detection, full sustained harmony inference, phrase-level harmony, full non-chord tone analysis, melody/voice-leading analysis, or jazz/modern harmony. OMR work remains isolated research only and does not add runtime input support. Sample files are for demo use only and do not add conversion support. Expert Review is not part of the core UI. Backend analysis behavior is unchanged in MVP 3.1.

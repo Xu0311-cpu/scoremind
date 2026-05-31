@@ -1,22 +1,16 @@
-# MVP 3.0 Release Notes
+# MVP 3.1 Release Notes
 
 ## Release Purpose
 
-MVP 3.0 polishes the Score Input Workspace so it is clearer, more product-like, and easier for real users to understand. Supported, export-first, research-only, and out-of-scope score paths are now visually distinct. No new runtime input capability was added. Runtime uploads remain limited to `.musicxml` and `.xml`.
+MVP 3.1 polishes error messages and empty states so ScoreMind feels more robust and understandable when users make mistakes or the backend is unavailable. Error messages are now bilingual (English/Chinese) and student-friendly. Empty states provide clearer guidance. No new analysis capability was added.
 
 ## What Changed
 
-- Score Input Workspace source options now have distinct status labels:
-  - MusicXML / XML: "Supported now"
-  - MuseScore / notation software: "Export first"
-  - PDF score: "Research only"
-  - Image / screenshot: "Research only"
-  - Scanned paper score: "Future work"
-  - MIDI / audio: "Outside current scope"
-- Each source type has a clear, concise description of why it is supported, export-first, research-only, or out of scope.
-- Status pills use distinct colors: green for supported, blue for export-first, purple for research, blue for future, grey for outside scope.
-- The workspace helper line now reads: "ScoreMind currently analyzes structured MusicXML. Other score sources are shown to clarify the roadmap, not as runtime features."
-- All version strings updated to 3.0.0.
+- Error messages for unsupported file type, no file selected, analysis failure, explanation failure, and backend unavailability are now bilingual and more descriptive.
+- Score rendering failure message now explains that analysis may still work.
+- Clipboard unavailability message now suggests manual copy.
+- Empty states for no chord analysis, no note analysis, and filter mismatch are now more helpful.
+- All version strings updated to 3.1.0.
 
 ## What Did Not Change
 
@@ -81,30 +75,17 @@ Open:
 http://localhost:3000
 ```
 
-If needed, set:
-
-```bash
-NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8000
-```
-
-## Recommended Demo Sample Files
-
-- `frontend/public/samples/c_major_progression.musicxml`
-- `frontend/public/samples/carried_context_notes.musicxml`
-- `backend/tests/fixtures/c_major_progression.musicxml`
-- `backend/tests/fixtures/carried_context_notes.musicxml`
-
 ## Validation Status
 
 Backend test suite:
 
 - `pytest`
-- Expected status for MVP 3.0: all tests passing.
+- Expected status for MVP 3.1: all tests passing.
 
 Frontend build:
 
 - `npm run build`
-- Expected status for MVP 3.0: build passing.
+- Expected status for MVP 3.1: build passing.
 
 ## Known Limitations
 
@@ -117,4 +98,4 @@ Frontend build:
 
 ## Future Roadmap
 
-See `docs/ROADMAP.md` for future work. Future items are not current MVP 3.0 capabilities unless explicitly implemented in the application.
+See `docs/ROADMAP.md` for future work. Future items are not current MVP 3.1 capabilities unless explicitly implemented in the application.
