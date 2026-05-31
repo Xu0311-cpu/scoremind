@@ -301,6 +301,21 @@ h3 {
   color: #765516;
 }
 
+.source-status.research {
+  background: #f3e8fd;
+  color: #6b21a8;
+}
+
+.source-status.future {
+  background: #e8f0fe;
+  color: #2453a6;
+}
+
+.source-status.outside {
+  background: #eceff1;
+  color: #4f5961;
+}
+
 .sample-links-panel,
 .unsupported-source-note {
   margin-top: 16px;

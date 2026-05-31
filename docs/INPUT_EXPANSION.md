@@ -10,18 +10,20 @@ This keeps the analysis core reliable. The system can parse symbolic events firs
 
 ## Score Input Workspace
 
-MVP 2.8 adds a frontend Score Input Workspace. It helps users identify what kind of score source they have and whether ScoreMind can process it today.
+The frontend Score Input Workspace helps users identify what kind of score source they have and whether ScoreMind can process it today.
 
 The workspace is guidance-only for unsupported formats. It does not add PDF upload, image upload, OMR, MIDI/audio support, or automatic conversion. Runtime upload support remains limited to `.musicxml` and `.xml`.
 
 Current workspace guidance:
 
-- MusicXML / XML: supported now; upload `.musicxml` or `.xml` directly.
-- MuseScore / notation software: export MusicXML/XML first, then upload.
-- PDF score: not supported yet; requires OMR, which is research-only.
-- Image / screenshot: not supported yet; requires OMR and correction workflow.
-- Scanned paper score: not supported yet; long-term input expansion work.
-- MIDI / audio: not supported; ScoreMind analyzes symbolic notation, not performance/audio input.
+- MusicXML / XML: supported now; upload `.musicxml` or `.xml` directly. This is the current reliable input path.
+- MuseScore / notation software: export first; export MusicXML/XML from MuseScore or notation software, then upload.
+- PDF score: research only; requires OMR, which is still research-only because recognition errors can corrupt downstream analysis.
+- Image / screenshot: research only; requires OMR and correction workflow. Current runtime does not process image files.
+- Scanned paper score: future work; needs OMR plus correction before analysis.
+- MIDI / audio: outside current scope; ScoreMind analyzes symbolic notation data, not performance or audio input.
+
+Supported, export-first, research-only, and out-of-scope paths are visually distinct in the workspace.
 
 ## Common Score Inputs Users May Have
 
@@ -63,7 +65,7 @@ If you only have PDF/image/scanned paper:
 
 ## Demo Sample Files
 
-MVP 2.8 includes downloadable MusicXML sample files in `frontend/public/samples` so testers can try the demo even if they do not already have a MusicXML file.
+Downloadable MusicXML sample files are available in `frontend/public/samples` so testers can try the demo even if they do not already have a MusicXML file.
 
 - `c_major_progression.musicxml`
 - `carried_context_notes.musicxml`
@@ -86,6 +88,6 @@ The project prioritizes a reliable deterministic analysis core first. Input conv
 
 ## Clear Boundary
 
-Input conversion is future work. MVP 2.8 explains import paths in the Score Input Workspace and provides demo sample MusicXML files.
+Input conversion is future work. The Score Input Workspace explains import paths and provides demo sample MusicXML files.
 
 `docs/INPUT_EXPANSION.md` explains what users can do today. `docs/INPUT_RESEARCH.md` evaluates future product and engineering options.

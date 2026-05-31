@@ -103,7 +103,7 @@ type InputSourceOption = {
   id: InputSourceId;
   label: string;
   status: string;
-  statusClass: "supported" | "export" | "unsupported";
+  statusClass: "supported" | "export" | "research" | "future" | "outside";
   message: string;
 };
 
@@ -148,42 +148,41 @@ const INPUT_SOURCE_OPTIONS: InputSourceOption[] = [
     label: "MusicXML / XML",
     status: "Supported now",
     statusClass: "supported",
-    message: "Upload .musicxml or .xml directly.",
+    message: "Upload `.musicxml` or `.xml` directly. This is the current reliable input path.",
   },
   {
     id: "notation",
     label: "MuseScore / notation software",
     status: "Export first",
     statusClass: "export",
-    message: "Export your score as MusicXML/XML, then upload it to ScoreMind.",
+    message: "Export your score as MusicXML/XML from MuseScore or notation software, then upload it here.",
   },
   {
     id: "pdf",
     label: "PDF score",
-    status: "Not supported yet",
-    statusClass: "unsupported",
-    message:
-      "PDF input requires OMR. OMR is currently research-only because recognition errors can corrupt downstream analysis.",
+    status: "Research only",
+    statusClass: "research",
+    message: "PDF input requires OMR. OMR is still research-only because recognition errors can corrupt downstream analysis.",
   },
   {
     id: "image",
     label: "Image / screenshot",
-    status: "Not supported yet",
-    statusClass: "unsupported",
-    message: "Image input requires OMR and correction workflow. Current MVP does not process image files.",
+    status: "Research only",
+    statusClass: "research",
+    message: "Image input also requires OMR and correction workflow. Current runtime does not process image files.",
   },
   {
     id: "scan",
     label: "Scanned paper score",
-    status: "Not supported yet",
-    statusClass: "unsupported",
-    message: "Scanned scores are long-term input expansion work and are not accepted by the runtime product.",
+    status: "Future work",
+    statusClass: "future",
+    message: "Scanned paper scores need OMR plus correction before analysis. This is not supported in the current runtime.",
   },
   {
     id: "midi_audio",
     label: "MIDI / audio",
-    status: "Not supported",
-    statusClass: "unsupported",
+    status: "Outside current scope",
+    statusClass: "outside",
     message: "ScoreMind currently analyzes symbolic notation data, not performance or audio input.",
   },
 ];
@@ -538,7 +537,7 @@ export default function Home() {
       <section className="workspace">
         <header className="page-header">
           <div>
-            <p className="eyebrow">MVP 2.9</p>
+            <p className="eyebrow">MVP 3.0</p>
             <h1>ScoreMind</h1>
             <p className="product-subtitle">AI Music Score Understanding</p>
           </div>
@@ -550,7 +549,7 @@ export default function Home() {
             <div>
               <h2>Score Input Workspace</h2>
               <p className="panel-note">
-                ScoreMind currently analyzes structured MusicXML. Other score sources are part of the input expansion roadmap, but they are not runtime features yet.
+                ScoreMind currently analyzes structured MusicXML. Other score sources are shown to clarify the roadmap, not as runtime features.
               </p>
             </div>
           </div>
@@ -618,7 +617,7 @@ export default function Home() {
               ) : (
                 <div className="unsupported-source-note">
                   <p>
-                    This source is guidance-only in MVP 2.9. The runtime upload control still accepts only
+                    This source is guidance-only in MVP 3.0. The runtime upload control still accepts only
                     {" "}.musicxml and .xml files after you export or convert externally.
                   </p>
                 </div>

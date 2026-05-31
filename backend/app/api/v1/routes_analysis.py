@@ -27,20 +27,20 @@ from app.schemas.analysis import (
 router = APIRouter()
 
 MVP_WARNINGS = [
-    "MVP 2.9 detects chords only from simultaneous pitch sets at identical offsets.",
+    "MVP 3.0 detects chords only from simultaneous pitch sets at identical offsets.",
     "Enharmonic spelling is not key-aware.",
     "Inversion is estimated from the lowest detected pitch.",
     "Roman numeral analysis is based only on the detected global key.",
     "No local modulation or secondary dominant analysis is performed.",
     "Harmonic function labels are basic MVP classifications.",
-    "MVP 2.9 note-level analysis prefers same-offset harmony, then may use carried previous chord context within the same measure.",
+    "MVP 3.0 note-level analysis prefers same-offset harmony, then may use carried previous chord context within the same measure.",
     "Carried harmony context is a conservative MVP approximation.",
     "It does not perform full sustained harmony, phrase-level harmony, or voice-leading analysis.",
     "A non_chord_tone role means the note is not part of the selected chord context; it is not full classical non-chord tone classification.",
-    "Passing tone and neighbor tone detection are not performed in MVP 2.9.",
+    "Passing tone and neighbor tone detection are not performed in MVP 3.0.",
 ]
 
-ANALYSIS_VERSION = "2.9.0"
+ANALYSIS_VERSION = "3.0.0"
 ANALYSIS_SCOPE = [
     "musicxml_input_only",
     "same_offset_vertical_pitch_set",
@@ -56,7 +56,7 @@ async def analyze_musicxml(file: UploadFile) -> MusicXMLAnalysisResponse:
     if not _looks_like_musicxml(file.filename):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Only .musicxml and .xml files are supported in MVP 2.9.",
+            detail="Only .musicxml and .xml files are supported in MVP 3.0.",
         )
 
     content = await file.read()

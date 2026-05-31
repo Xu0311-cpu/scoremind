@@ -1,31 +1,37 @@
-# MVP 2.9 Release Notes
+# MVP 3.0 Release Notes
 
 ## Release Purpose
 
-MVP 2.9 adds a Download Learning Report action that saves the generated Markdown Learning Report as a local `.md` file. The backend analysis behavior is unchanged from MVP 2.8. No new analysis capabilities, PDF export, or extra AI reasoning are added.
+MVP 3.0 polishes the Score Input Workspace so it is clearer, more product-like, and easier for real users to understand. Supported, export-first, research-only, and out-of-scope score paths are now visually distinct. No new runtime input capability was added. Runtime uploads remain limited to `.musicxml` and `.xml`.
 
 ## What Changed
 
-- Added a `Download Learning Report` button next to `Copy Learning Report` in the Export Learning Report section.
-- The download saves the current Markdown report as a `.md` file using browser Blob and `URL.createObjectURL`.
-- Filename is derived from the uploaded file name (e.g., `c_major_progression.musicxml` produces `c_major_progression-learning-report.md`), with a fallback of `scoremind-learning-report.md`.
-- Added a UI note near report actions: "The report is generated from deterministic backend analysis only. No PDF export or extra AI reasoning is added."
-- All version strings updated to 2.9.0.
+- Score Input Workspace source options now have distinct status labels:
+  - MusicXML / XML: "Supported now"
+  - MuseScore / notation software: "Export first"
+  - PDF score: "Research only"
+  - Image / screenshot: "Research only"
+  - Scanned paper score: "Future work"
+  - MIDI / audio: "Outside current scope"
+- Each source type has a clear, concise description of why it is supported, export-first, research-only, or out of scope.
+- Status pills use distinct colors: green for supported, blue for export-first, purple for research, blue for future, grey for outside scope.
+- The workspace helper line now reads: "ScoreMind currently analyzes structured MusicXML. Other score sources are shown to clarify the roadmap, not as runtime features."
+- All version strings updated to 3.0.0.
 
 ## What Did Not Change
 
 - Backend analysis algorithms are unchanged.
 - Supported upload formats remain `.musicxml` and `.xml` only.
-- PDF/image/OMR upload is still not supported.
+- PDF/image/OMR upload is still not supported at runtime.
 - No real LLM/OpenAI integration.
 - No database, authentication, or user accounts.
 - Expert Review is not reintroduced.
-- Score Input Workspace and OMR research remain as in MVP 2.8.
+- No new music-theory analysis was added.
 
 ## Current Capabilities
 
 - Upload `.musicxml` and `.xml` files.
-- Use the Score Input Workspace to understand supported and unsupported score sources.
+- Use the Score Input Workspace to understand supported, export-first, research-only, and out-of-scope score sources.
 - Render a MusicXML score preview in the frontend.
 - Run deterministic backend analysis for:
   - basic triads and seventh chords
@@ -88,25 +94,17 @@ NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8000
 - `backend/tests/fixtures/c_major_progression.musicxml`
 - `backend/tests/fixtures/carried_context_notes.musicxml`
 
-The frontend sample links are download links only. Users still upload the downloaded file manually through the existing MusicXML/XML upload flow.
-
 ## Validation Status
 
 Backend test suite:
 
 - `pytest`
-- Expected status for MVP 2.9: all tests passing.
+- Expected status for MVP 3.0: all tests passing.
 
 Frontend build:
 
 - `npm run build`
-- Expected status for MVP 2.9: build passing.
-
-Validation documentation:
-
-- `docs/VALIDATION.md`
-- `docs/VALIDATION_REPORT_TEMPLATE.md`
-- `docs/reviews/mvp-1.4-carried-context-notes-review.md`
+- Expected status for MVP 3.0: build passing.
 
 ## Known Limitations
 
@@ -119,4 +117,4 @@ Validation documentation:
 
 ## Future Roadmap
 
-See `docs/ROADMAP.md` for future work. Future items are not current MVP 2.9 capabilities unless explicitly implemented in the application.
+See `docs/ROADMAP.md` for future work. Future items are not current MVP 3.0 capabilities unless explicitly implemented in the application.
