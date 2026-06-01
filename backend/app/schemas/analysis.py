@@ -133,25 +133,25 @@ class DetectedChord(BaseModel):
 
 
 class MeasureHarmonicContext(BaseModel):
-    primary_chord_label: str | None = Field(
+    selected_chord_label: str | None = Field(
         default=None,
         description="Human-readable chord label such as C major or G dominant_seventh.",
     )
-    primary_root: str | None = Field(default=None, description="Root of the primary chord.")
-    primary_quality: ChordQuality = Field(
-        default="unknown", description="Quality of the primary chord."
+    selected_root: str | None = Field(default=None, description="Root of the selected chord.")
+    selected_quality: ChordQuality = Field(
+        default="unknown", description="Quality of the selected chord."
     )
-    primary_roman_numeral: str | None = Field(
-        default=None, description="Roman numeral of the primary chord when available."
+    selected_roman_numeral: str | None = Field(
+        default=None, description="Roman numeral of the selected chord when available."
     )
-    primary_harmonic_function: HarmonicFunction = Field(
-        default="unknown", description="Harmonic function of the primary chord."
+    selected_harmonic_function: HarmonicFunction = Field(
+        default="unknown", description="Harmonic function of the selected chord."
     )
-    context_source: Literal["detected_chord", "no_detected_chord"] = Field(
-        description="Whether the context was derived from a detected chord or not."
+    context_source: Literal["detected_chord", "no_detected_chord", "not_available"] = Field(
+        description="Whether the context was derived from a detected chord, not available, or missing."
     )
     confidence: HarmonicContextConfidence = Field(
-        description="supported if roman_numeral and function exist, partial if chord exists but roman/function missing, low if no chord."
+        description="supported if roman_numeral and function exist, partial if chord exists but roman/function missing, low if no chord or not available."
     )
     warnings: list[str] = Field(
         default_factory=list, description="Warnings for this harmonic context."
@@ -170,8 +170,9 @@ class MeasureAnalysis(BaseModel):
     analyzed_notes: list[AnalyzedNoteEvent] = Field(
         description="Note-level membership check against same-offset or carried previous chord context."
     )
-    harmonic_context: MeasureHarmonicContext = Field(
-        description="Measure-level harmonic context derived from detected chords."
+    harmonic_context: MeasureHarmonicContext | None = Field(
+        default=None,
+        description="Measure-level harmonic context derived from detected chords. Null if not available.",
     )
 
 

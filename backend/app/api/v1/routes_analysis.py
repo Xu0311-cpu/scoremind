@@ -31,11 +31,11 @@ router = APIRouter()
 def _build_measure_harmonic_context(detected_chords: list[DetectedChord]) -> MeasureHarmonicContext:
     if not detected_chords:
         return MeasureHarmonicContext(
-            primary_chord_label=None,
-            primary_root=None,
-            primary_quality="unknown",
-            primary_roman_numeral=None,
-            primary_harmonic_function="unknown",
+            selected_chord_label=None,
+            selected_root=None,
+            selected_quality="unknown",
+            selected_roman_numeral=None,
+            selected_harmonic_function="unknown",
             context_source="no_detected_chord",
             confidence="low",
             warnings=["No chord detected in this measure."],
@@ -44,48 +44,56 @@ def _build_measure_harmonic_context(detected_chords: list[DetectedChord]) -> Mea
     supported = [
         c for c in detected_chords if c.roman_numeral is not None and c.harmonic_function != "unknown"
     ]
-    if supported:
-        primary = supported[0]
-        label = f"{primary.root} {primary.quality}" if primary.root else primary.quality
-        return MeasureHarmonicContext(
-            primary_chord_label=label,
-            primary_root=primary.root,
-            primary_quality=primary.quality,
-            primary_roman_numeral=primary.roman_numeral,
-            primary_harmonic_function=primary.harmonic_function,
-            context_source="detected_chord",
-            confidence="supported",
-            warnings=[],
+    warnings: list[str] = []
+    if len(detected_chords) > 1:
+        warnings.append(
+            "Multiple detected chords exist in this measure; "
+            "the selected context is a representative reference, not a full harmonic reduction."
         )
 
-    primary = detected_chords[0]
-    label = f"{primary.root} {primary.quality}" if primary.root else primary.quality
+    if supported:
+        selected = supported[0]
+        label = f"{selected.root} {selected.quality}" if selected.root else selected.quality
+        return MeasureHarmonicContext(
+            selected_chord_label=label,
+            selected_root=selected.root,
+            selected_quality=selected.quality,
+            selected_roman_numeral=selected.roman_numeral,
+            selected_harmonic_function=selected.harmonic_function,
+            context_source="detected_chord",
+            confidence="supported",
+            warnings=warnings,
+        )
+
+    selected = detected_chords[0]
+    label = f"{selected.root} {selected.quality}" if selected.root else selected.quality
+    warnings.append("Chord detected but Roman numeral or harmonic function is not supported.")
     return MeasureHarmonicContext(
-        primary_chord_label=label,
-        primary_root=primary.root,
-        primary_quality=primary.quality,
-        primary_roman_numeral=primary.roman_numeral,
-        primary_harmonic_function=primary.harmonic_function,
+        selected_chord_label=label,
+        selected_root=selected.root,
+        selected_quality=selected.quality,
+        selected_roman_numeral=selected.roman_numeral,
+        selected_harmonic_function=selected.harmonic_function,
         context_source="detected_chord",
         confidence="partial",
-        warnings=["Chord detected but Roman numeral or harmonic function is not supported."],
+        warnings=warnings,
     )
 
 MVP_WARNINGS = [
-    "MVP 3.4 detects chords only from simultaneous pitch sets at identical offsets.",
+    "MVP 3.4.1 detects chords only from simultaneous pitch sets at identical offsets.",
     "Enharmonic spelling is not key-aware.",
     "Inversion is estimated from the lowest detected pitch.",
     "Roman numeral analysis is based only on the detected global key.",
     "No local modulation or secondary dominant analysis is performed.",
     "Harmonic function labels are basic MVP classifications.",
-    "MVP 3.4 note-level analysis prefers same-offset harmony, then may use carried previous chord context within the same measure.",
+    "MVP 3.4.1 note-level analysis prefers same-offset harmony, then may use carried previous chord context within the same measure.",
     "Carried harmony context is a conservative MVP approximation.",
     "It does not perform full sustained harmony, phrase-level harmony, or voice-leading analysis.",
     "A non_chord_tone role means the note is not part of the selected chord context; it is not full classical non-chord tone classification.",
-    "Passing tone and neighbor tone detection are not performed in MVP 3.4.",
+    "Passing tone and neighbor tone detection are not performed in MVP 3.4.1.",
 ]
 
-ANALYSIS_VERSION = "3.4.0"
+ANALYSIS_VERSION = "3.4.1"
 ANALYSIS_SCOPE = [
     "musicxml_input_only",
     "same_offset_vertical_pitch_set",
@@ -101,7 +109,7 @@ async def analyze_musicxml(file: UploadFile) -> MusicXMLAnalysisResponse:
     if not _looks_like_musicxml(file.filename):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Only .musicxml and .xml files are supported in MVP 3.4.",
+            detail="Only .musicxml and .xml files are supported in MVP 3.4.1.",
         )
 
     content = await file.read()

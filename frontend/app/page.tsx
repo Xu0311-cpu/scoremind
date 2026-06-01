@@ -45,11 +45,11 @@ type AnalyzedNote = {
 };
 
 type MeasureHarmonicContext = {
-  primary_chord_label: string | null;
-  primary_root: string | null;
-  primary_quality: string;
-  primary_roman_numeral: string | null;
-  primary_harmonic_function: string;
+  selected_chord_label: string | null;
+  selected_root: string | null;
+  selected_quality: string;
+  selected_roman_numeral: string | null;
+  selected_harmonic_function: string;
   context_source: string;
   confidence: "supported" | "partial" | "low";
   warnings: string[];
@@ -59,7 +59,7 @@ type MeasureAnalysis = {
   measure_number: number;
   detected_chords: DetectedChord[];
   analyzed_notes: AnalyzedNote[];
-  harmonic_context: MeasureHarmonicContext;
+  harmonic_context?: MeasureHarmonicContext | null;
 };
 
 type MusicXMLAnalysisResponse = {
@@ -550,7 +550,7 @@ export default function Home() {
       <section className="workspace">
         <header className="page-header">
           <div>
-            <p className="eyebrow">MVP 3.4</p>
+            <p className="eyebrow">MVP 3.4.1</p>
             <h1>ScoreMind</h1>
             <p className="product-subtitle">AI Music Score Understanding</p>
           </div>
@@ -630,7 +630,7 @@ export default function Home() {
               ) : (
                 <div className="unsupported-source-note">
                   <p>
-                    This source is guidance-only in MVP 3.4. The runtime upload control still accepts only
+                    This source is guidance-only in MVP 3.4.1. The runtime upload control still accepts only
                     {" "}.musicxml and .xml files after you export or convert externally.
                   </p>
                 </div>
@@ -1433,7 +1433,7 @@ function buildMeasureWalkthroughs(measures: MeasureAnalysis[]): MeasureWalkthrou
       const ctx = measure.harmonic_context;
       const harmonicContextSummary = buildHarmonicContextSummary(ctx);
       const cautions: string[] = [];
-      if (ctx.confidence === "low") {
+      if (!ctx || ctx.confidence === "low") {
         cautions.push("本小节没有可用的和声上下文，无法给出和弦级数和功能判断。");
       } else if (ctx.confidence === "partial") {
         cautions.push("本小节检测到和弦，但罗马数字或功能标签不在当前支持范围内。");
@@ -1457,15 +1457,18 @@ function buildMeasureWalkthroughs(measures: MeasureAnalysis[]): MeasureWalkthrou
     });
 }
 
-function buildHarmonicContextSummary(ctx: MeasureHarmonicContext): string {
-  if (ctx.confidence === "low") {
-    return "本小节没有检测到可用的和弦上下文。";
+function buildHarmonicContextSummary(ctx?: MeasureHarmonicContext | null): string {
+  if (!ctx || ctx.confidence === "low") {
+    return "本小节没有可用的和声参考。";
   }
-  const label = ctx.primary_chord_label ?? "unknown";
-  const roman = ctx.primary_roman_numeral ? ` / ${ctx.primary_roman_numeral}` : "";
-  const func = formatHarmonicFunctionForStudent(ctx.primary_harmonic_function);
+  const label = ctx.selected_chord_label ?? "unknown";
+  const roman = ctx.selected_roman_numeral ? ` / ${ctx.selected_roman_numeral}` : "";
+  const func = formatHarmonicFunctionForStudent(ctx.selected_harmonic_function);
   const confidenceLabel = ctx.confidence === "supported" ? "可信" : "部分支持";
-  return `主要和声：${label}${roman}，功能为${func}（${confidenceLabel}）。`;
+  const multiWarning = ctx.warnings.some((w) => w.includes("Multiple detected chords"))
+    ? "（本小节有多个和弦，此处为参考选择）"
+    : "";
+  return `选定和声参考：${label}${roman}，功能为${func}（${confidenceLabel}）${multiWarning}。`;
 }
 
 function buildMeasureNoteRelationshipSentence(summary: NoteSummary) {

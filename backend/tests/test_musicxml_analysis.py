@@ -278,7 +278,7 @@ def test_api_analyze_musicxml_returns_structured_json() -> None:
     payload = response.json()
     assert payload["file_name"] == "simple_chords.musicxml"
     assert payload["measure_count"] == 4
-    assert payload["analysis_version"] == "3.4.0"
+    assert payload["analysis_version"] == "3.4.1"
     assert payload["analysis_scope"] == [
         "musicxml_input_only",
         "same_offset_vertical_pitch_set",
@@ -288,12 +288,12 @@ def test_api_analyze_musicxml_returns_structured_json() -> None:
         "carried_previous_chord_within_measure",
     ]
     assert payload["key_analysis"]["tonic"] is not None
-    assert "MVP 3.4 detects chords only from simultaneous pitch sets at identical offsets." in payload["warnings"]
+    assert "MVP 3.4.1 detects chords only from simultaneous pitch sets at identical offsets." in payload["warnings"]
     assert "Roman numeral analysis is based only on the detected global key." in payload["warnings"]
     assert "No local modulation or secondary dominant analysis is performed." in payload["warnings"]
     assert "Harmonic function labels are basic MVP classifications." in payload["warnings"]
     assert (
-        "MVP 3.4 note-level analysis prefers same-offset harmony, then may use carried previous chord context within the same measure."
+        "MVP 3.4.1 note-level analysis prefers same-offset harmony, then may use carried previous chord context within the same measure."
     ) in payload["warnings"]
     assert "Carried harmony context is a conservative MVP approximation." in payload["warnings"]
     assert "It does not perform full sustained harmony, phrase-level harmony, or voice-leading analysis." in payload["warnings"]
@@ -469,13 +469,13 @@ def test_explain_analysis_returns_template_explanation_for_valid_analysis_json()
 
     assert explanation_response.status_code == 200
     payload = explanation_response.json()
-    assert payload["analysis_version"] == "3.4.0"
-    assert payload["explanation_version"] == "3.4.0"
+    assert payload["analysis_version"] == "3.4.1"
+    assert payload["explanation_version"] == "3.4.1"
     assert payload["language"] == "zh-CN"
     assert payload["level"] == "student"
     assert "C major" in payload["summary"]
     assert "This explanation is template-generated from deterministic analysis output." in payload["warnings"]
-    assert "No LLM is called in MVP 3.4." in payload["warnings"]
+    assert "No LLM is called in MVP 3.4.1." in payload["warnings"]
     assert "Future LLM providers must not infer new music-theory conclusions." in payload["warnings"]
     assert "Roman numeral analysis is based only on the detected global key." in payload["warnings"]
 
@@ -625,7 +625,7 @@ def test_api_invalid_file_extension_returns_400() -> None:
     )
 
     assert response.status_code == 400
-    assert response.json()["detail"] == "Only .musicxml and .xml files are supported in MVP 3.4."
+    assert response.json()["detail"] == "Only .musicxml and .xml files are supported in MVP 3.4.1."
 
 
 def test_harmonic_context_exists_on_measures() -> None:
@@ -641,11 +641,11 @@ def test_harmonic_context_exists_on_measures() -> None:
     for measure in response.json()["measures"]:
         assert "harmonic_context" in measure
         ctx = measure["harmonic_context"]
-        assert "primary_chord_label" in ctx
-        assert "primary_root" in ctx
-        assert "primary_quality" in ctx
-        assert "primary_roman_numeral" in ctx
-        assert "primary_harmonic_function" in ctx
+        assert "selected_chord_label" in ctx
+        assert "selected_root" in ctx
+        assert "selected_quality" in ctx
+        assert "selected_roman_numeral" in ctx
+        assert "selected_harmonic_function" in ctx
         assert "context_source" in ctx
         assert "confidence" in ctx
         assert "warnings" in ctx
@@ -666,16 +666,16 @@ def test_harmonic_context_supported_for_c_major_progression() -> None:
 
     ctx1 = measures[0]["harmonic_context"]
     assert ctx1["confidence"] == "supported"
-    assert ctx1["primary_root"] == "C"
-    assert ctx1["primary_quality"] == "major"
-    assert ctx1["primary_roman_numeral"] == "I"
-    assert ctx1["primary_harmonic_function"] == "tonic"
+    assert ctx1["selected_root"] == "C"
+    assert ctx1["selected_quality"] == "major"
+    assert ctx1["selected_roman_numeral"] == "I"
+    assert ctx1["selected_harmonic_function"] == "tonic"
     assert ctx1["context_source"] == "detected_chord"
 
     ctx2 = measures[1]["harmonic_context"]
     assert ctx2["confidence"] == "supported"
-    assert ctx2["primary_roman_numeral"] == "V7"
-    assert ctx2["primary_harmonic_function"] == "dominant"
+    assert ctx2["selected_roman_numeral"] == "V7"
+    assert ctx2["selected_harmonic_function"] == "dominant"
 
 
 def test_harmonic_context_partial_for_unsupported_chord() -> None:
@@ -693,8 +693,8 @@ def test_harmonic_context_partial_for_unsupported_chord() -> None:
     ctx6 = measures[5]["harmonic_context"]
     assert ctx6["confidence"] == "partial"
     assert ctx6["context_source"] == "detected_chord"
-    assert ctx6["primary_roman_numeral"] is None
-    assert ctx6["primary_harmonic_function"] == "unknown"
+    assert ctx6["selected_roman_numeral"] is None
+    assert ctx6["selected_harmonic_function"] == "unknown"
     assert len(ctx6["warnings"]) > 0
 
 
@@ -716,7 +716,51 @@ def test_harmonic_context_low_for_no_detected_chord() -> None:
         ctx = measure["harmonic_context"]
         assert ctx["confidence"] == "low"
         assert ctx["context_source"] == "no_detected_chord"
-        assert ctx["primary_chord_label"] is None
-        assert ctx["primary_root"] is None
-        assert ctx["primary_roman_numeral"] is None
+        assert ctx["selected_chord_label"] is None
+        assert ctx["selected_root"] is None
+        assert ctx["selected_roman_numeral"] is None
         assert len(ctx["warnings"]) > 0
+
+
+def test_explain_accepts_analysis_without_harmonic_context() -> None:
+    client = TestClient(app)
+
+    with (FIXTURE_DIR / "c_major_progression.musicxml").open("rb") as handle:
+        analysis_response = client.post(
+            "/api/v1/analyze/musicxml",
+            files={"file": ("c_major_progression.musicxml", handle, "application/vnd.recordare.musicxml+xml")},
+        )
+    assert analysis_response.status_code == 200
+
+    analysis = analysis_response.json()
+    for measure in analysis["measures"]:
+        del measure["harmonic_context"]
+
+    explanation_response = client.post(
+        "/api/v1/explain/analysis",
+        json={"analysis": analysis, "language": "zh-CN", "level": "student"},
+    )
+
+    assert explanation_response.status_code == 200
+    payload = explanation_response.json()
+    assert "explanation_version" in payload
+    assert payload["explanation_version"] == "3.4.1"
+
+
+def test_multiple_detected_chords_warning() -> None:
+    client = TestClient(app)
+
+    with (FIXTURE_DIR / "simple_chords.musicxml").open("rb") as handle:
+        response = client.post(
+            "/api/v1/analyze/musicxml",
+            files={"file": ("simple_chords.musicxml", handle, "application/vnd.recordare.musicxml+xml")},
+        )
+
+    assert response.status_code == 200
+    measures = response.json()["measures"]
+
+    single_chord_measures = [m for m in measures if len(m["detected_chords"]) == 1]
+    for measure in single_chord_measures:
+        ctx = measure["harmonic_context"]
+        multi_warnings = [w for w in ctx["warnings"] if "Multiple detected chords" in w]
+        assert len(multi_warnings) == 0
