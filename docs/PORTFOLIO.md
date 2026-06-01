@@ -2,7 +2,7 @@
 
 ## One-Line Summary
 
-AI Music Score Understanding is a deterministic MusicXML score-analysis demo that helps music students read key, chords, Roman numerals, harmonic function, and note-level harmony relationships from symbolic scores.
+ScoreMind is a deterministic MusicXML score-analysis demo that helps music students read key, chords, Roman numerals, harmonic function, and note-level harmony relationships from symbolic scores.
 
 ## Target User Pain Point
 
@@ -16,21 +16,22 @@ Generic AI can produce fluent music-theory prose, but it may hallucinate chords,
 
 The product accepts MusicXML/XML, renders the score, runs deterministic symbolic analysis, and presents the result through:
 
-- Student Summary
-- Process Explanation
-- Measure Walkthrough
-- Terminology Guide
-- Technical Evidence
-- Learning Report export
+- Score Input Workspace: helps users understand which score sources are supported, need export, or are research-only.
+- Student Analysis: Student Summary, Process Explanation, Measure Walkthrough, Terminology Guide, and static learning hints.
+- Technical Evidence: detailed chord cards, note-level filters, summaries, backend warnings, and validation hints.
+- Learning Report: generate, copy, or download a Markdown report from the current deterministic analysis.
+- Improved error and empty states with bilingual guidance.
 
 ## Current Workflow
 
-1. Upload MusicXML/XML.
-2. Preview the score with OpenSheetMusicDisplay.
-3. Run FastAPI deterministic analysis.
-4. Read Student Analysis.
-5. Inspect Technical Evidence.
-6. Generate a Markdown Learning Report.
+1. Open the Score Input Workspace to understand supported score sources.
+2. Download a sample MusicXML file if needed.
+3. Upload MusicXML/XML.
+4. Preview the score with OpenSheetMusicDisplay.
+5. Run FastAPI deterministic analysis.
+6. Read Student Analysis with polished Chinese explanations.
+7. Inspect Technical Evidence.
+8. Generate, copy, or download a Markdown Learning Report.
 
 ## Technical Highlights
 
@@ -39,8 +40,10 @@ The product accepts MusicXML/XML, renders the score, runs deterministic symbolic
 - Deterministic chord, global-key, Roman numeral, harmonic function, and note-level harmony-membership analysis.
 - Evidence fields for auditability.
 - Next.js frontend with OSMD score preview.
-- Frontend-only student learning views that do not add new theory inference.
-- Markdown Learning Report generated from the current analysis JSON.
+- Score Input Workspace with distinct supported, export-first, research-only, and out-of-scope visual paths.
+- Bilingual error and empty states for robustness.
+- Polished Chinese student-facing analysis views.
+- Markdown Learning Report with copy and download.
 
 ## Deterministic Analysis Boundary
 
@@ -60,7 +63,7 @@ See `docs/VALIDATION.md` and `docs/VALIDATION_REPORT_TEMPLATE.md` for review met
 ## Current Limitations
 
 - MusicXML/XML only.
-- No PDF/image/OMR.
+- No PDF/image/OMR at runtime.
 - No real LLM/OpenAI integration.
 - No local modulation.
 - No passing/neighbor tone classification.
@@ -70,7 +73,6 @@ See `docs/VALIDATION.md` and `docs/VALIDATION_REPORT_TEMPLATE.md` for review met
 
 ## Future Roadmap
 
-- Better frontend usability and report export.
 - Stronger conservative note-level analysis.
 - Optional OMR pipeline for PDF/image input.
 - Optional LLM provider for prose only, constrained by deterministic analysis output.
@@ -81,5 +83,5 @@ See `docs/VALIDATION.md` and `docs/VALIDATION_REPORT_TEMPLATE.md` for review met
 - Built a deterministic MusicXML analysis backend with FastAPI, Pydantic, `music21`, and pytest.
 - Designed a structured music-reasoning pipeline for chord quality, global key, Roman numerals, harmonic functions, and note-level harmony membership.
 - Implemented evidence-backed API responses so analysis outputs are auditable before any LLM explanation layer.
-- Built a Next.js frontend with MusicXML score preview, student-facing analysis, technical evidence views, and Markdown report export.
+- Built a Next.js frontend with MusicXML score preview, Score Input Workspace, student-facing analysis, technical evidence views, and Markdown report export with download.
 - Maintained a strict boundary between deterministic music reasoning and future natural-language explanation.

@@ -537,7 +537,7 @@ export default function Home() {
       <section className="workspace">
         <header className="page-header">
           <div>
-            <p className="eyebrow">MVP 3.2</p>
+            <p className="eyebrow">MVP 3.3</p>
             <h1>ScoreMind</h1>
             <p className="product-subtitle">AI Music Score Understanding</p>
           </div>
@@ -617,7 +617,7 @@ export default function Home() {
               ) : (
                 <div className="unsupported-source-note">
                   <p>
-                    This source is guidance-only in MVP 3.2. The runtime upload control still accepts only
+                    This source is guidance-only in MVP 3.3. The runtime upload control still accepts only
                     {" "}.musicxml and .xml files after you export or convert externally.
                   </p>
                 </div>

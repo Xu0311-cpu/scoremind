@@ -1,20 +1,16 @@
-# MVP 3.2 Release Notes
+# MVP 3.3 Release Notes
 
 ## Release Purpose
 
-MVP 3.2 polishes the Chinese student-facing reading experience. Global key, chord progression, harmonic function, note-level relationship, context reliability, terminology guide, and measure walkthrough explanations are now more natural and concise in Chinese. No new analysis capability was added.
+MVP 3.3 aligns documentation, demo flow, screenshot guidance, and portfolio language with the current MVP 3.3 product state. No new runtime capability was added.
 
 ## What Changed
 
-- Global key summary now explains that all subsequent chord and function analysis is based on the detected key.
-- Chord progression lines use more natural Chinese phrasing.
-- Harmonic function explanations are clearer and include concrete examples.
-- Note-level relationship explanations use simpler Chinese.
-- Context reliability explanations now use Chinese-first terminology with English in parentheses.
-- Terminology Guide definitions are shorter and more concise, with Chinese helper labels.
-- Measure Walkthrough summaries use more natural Chinese phrasing.
-- Learning hints are rewritten in clearer Chinese.
-- All version strings updated to 3.2.0.
+- README updated to reflect current capabilities: Score Input Workspace, Download Learning Report, improved error/empty states, and Chinese student-facing analysis polish.
+- `docs/PORTFOLIO.md` updated to match MVP 3.3 product positioning and resume-ready bullets.
+- `docs/DEMO_FLOW.md` updated with a 10-step demo script covering Score Input Workspace, sample download, upload, analysis, Student Analysis, Measure Walkthrough, Technical Evidence, and Learning Report download.
+- `docs/SCREENSHOT_GUIDE.md` updated with recommended screenshots for Score Input Workspace, Score Preview, Student Analysis, Measure Walkthrough, Technical Evidence, and Download Learning Report.
+- All version strings updated to 3.3.0.
 
 ## What Did Not Change
 
@@ -28,8 +24,8 @@ MVP 3.2 polishes the Chinese student-facing reading experience. Global key, chor
 
 ## Current Capabilities
 
+- Score Input Workspace with distinct supported, export-first, research-only, and out-of-scope paths.
 - Upload `.musicxml` and `.xml` files.
-- Use the Score Input Workspace to understand supported, export-first, research-only, and out-of-scope score sources.
 - Render a MusicXML score preview in the frontend.
 - Run deterministic backend analysis for:
   - basic triads and seventh chords
@@ -38,10 +34,10 @@ MVP 3.2 polishes the Chinese student-facing reading experience. Global key, chor
   - basic harmonic function labels
   - conservative note-level chord-tone membership
   - carried previous chord context within a measure
-- Show Student Analysis, Process Explanation, Measure Walkthrough, Terminology Guide, and Technical Evidence.
-- Generate a Markdown Learning Report.
-- Copy the Learning Report to clipboard.
-- Download the Learning Report as a `.md` file.
+- Show Student Analysis with polished Chinese explanations.
+- Show Process Explanation, Measure Walkthrough, Terminology Guide, and Technical Evidence.
+- Generate, copy, or download a Markdown Learning Report.
+- Bilingual error and empty states.
 - Download demo MusicXML sample files from the frontend.
 
 ## Intentionally Unsupported
@@ -79,17 +75,19 @@ Open:
 http://localhost:3000
 ```
 
+See `docs/DEMO_FLOW.md` for a full step-by-step demo script.
+
 ## Validation Status
 
 Backend test suite:
 
 - `pytest`
-- Expected status for MVP 3.2: all tests passing.
+- Expected status for MVP 3.3: all tests passing.
 
 Frontend build:
 
 - `npm run build`
-- Expected status for MVP 3.2: build passing.
+- Expected status for MVP 3.3: build passing.
 
 ## Known Limitations
 
@@ -102,4 +100,4 @@ Frontend build:
 
 ## Future Roadmap
 
-See `docs/ROADMAP.md` for future work. Future items are not current MVP 3.2 capabilities unless explicitly implemented in the application.
+See `docs/ROADMAP.md` for future work. Future items are not current MVP 3.3 capabilities unless explicitly implemented in the application.
