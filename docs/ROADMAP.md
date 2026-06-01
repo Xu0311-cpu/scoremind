@@ -1,6 +1,6 @@
 # Roadmap
 
-This roadmap describes future work. Items listed here are not current MVP 3.0 capabilities unless explicitly implemented elsewhere.
+This roadmap describes future work. Items listed here are not current MVP 3.3 capabilities unless explicitly implemented elsewhere.
 
 ## Current / Completed
 
@@ -39,4 +39,4 @@ This roadmap describes future work. Items listed here are not current MVP 3.0 ca
 
 ## Current Boundary
 
-The current system is MusicXML/XML only. MVP 3.0 includes a polished Score Input Workspace and active OMR feasibility research, but the runtime app still does not perform OMR, PDF/image upload, MIDI/audio analysis, local modulation, passing tone detection, neighbor tone detection, full sustained harmony inference, melody analysis, voice-leading analysis, or jazz/modern harmony analysis.
+The current system is MusicXML/XML only. MVP 3.3 includes a polished Score Input Workspace and active OMR feasibility research, but the runtime app still does not perform OMR, PDF/image upload, MIDI/audio analysis, local modulation, passing tone detection, neighbor tone detection, full sustained harmony inference, melody analysis, voice-leading analysis, or jazz/modern harmony analysis.
