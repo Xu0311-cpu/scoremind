@@ -44,10 +44,22 @@ type AnalyzedNote = {
   };
 };
 
+type MeasureHarmonicContext = {
+  primary_chord_label: string | null;
+  primary_root: string | null;
+  primary_quality: string;
+  primary_roman_numeral: string | null;
+  primary_harmonic_function: string;
+  context_source: string;
+  confidence: "supported" | "partial" | "low";
+  warnings: string[];
+};
+
 type MeasureAnalysis = {
   measure_number: number;
   detected_chords: DetectedChord[];
   analyzed_notes: AnalyzedNote[];
+  harmonic_context: MeasureHarmonicContext;
 };
 
 type MusicXMLAnalysisResponse = {
@@ -129,6 +141,7 @@ type MeasureWalkthrough = {
   noteSummary: NoteSummary;
   noteRelationshipSentence: string;
   readingGuide: string;
+  harmonicContextSummary: string;
   cautions: string[];
 };
 
@@ -537,7 +550,7 @@ export default function Home() {
       <section className="workspace">
         <header className="page-header">
           <div>
-            <p className="eyebrow">MVP 3.3</p>
+            <p className="eyebrow">MVP 3.4</p>
             <h1>ScoreMind</h1>
             <p className="product-subtitle">AI Music Score Understanding</p>
           </div>
@@ -617,7 +630,7 @@ export default function Home() {
               ) : (
                 <div className="unsupported-source-note">
                   <p>
-                    This source is guidance-only in MVP 3.3. The runtime upload control still accepts only
+                    This source is guidance-only in MVP 3.4. The runtime upload control still accepts only
                     {" "}.musicxml and .xml files after you export or convert externally.
                   </p>
                 </div>
@@ -794,6 +807,7 @@ export default function Home() {
                               ))}
                             </ul>
                           </div>
+                          <p className="walkthrough-harmonic-context">{walkthrough.harmonicContextSummary}</p>
                           <p className="walkthrough-summary">{walkthrough.noteRelationshipSentence}</p>
                           <p>{walkthrough.readingGuide}</p>
                           {walkthrough.cautions.length > 0 && (
@@ -1416,18 +1430,19 @@ function buildMeasureWalkthroughs(measures: MeasureAnalysis[]): MeasureWalkthrou
               return `这一小节主要是 ${chordLabel}${romanText}，功能上${functionLabel}。`;
             })
           : ["当前小节没有检测到可展示的和弦。"];
+      const ctx = measure.harmonic_context;
+      const harmonicContextSummary = buildHarmonicContextSummary(ctx);
       const cautions: string[] = [];
+      if (ctx.confidence === "low") {
+        cautions.push("本小节没有可用的和声上下文，无法给出和弦级数和功能判断。");
+      } else if (ctx.confidence === "partial") {
+        cautions.push("本小节检测到和弦，但罗马数字或功能标签不在当前支持范围内。");
+      }
       if (noteSummary.carriedContext > 0) {
         cautions.push("本小节有音符使用了沿用前和弦（carried context），说明系统沿用了同小节前面的和弦作为参考。");
       }
       if (noteSummary.unknown > 0) {
         cautions.push("本小节有音符缺少可用和声上下文，系统暂不判断其归属。");
-      }
-      if (measure.detected_chords.some((chord) => chord.roman_numeral === null)) {
-        cautions.push("该和弦的罗马数字不在当前支持范围内。");
-      }
-      if (measure.detected_chords.some((chord) => chord.harmonic_function === "unknown")) {
-        cautions.push("本小节有和弦的功能标签为 unknown，需要谨慎阅读。");
       }
 
       return {
@@ -1436,9 +1451,21 @@ function buildMeasureWalkthroughs(measures: MeasureAnalysis[]): MeasureWalkthrou
         noteSummary,
         noteRelationshipSentence: buildMeasureNoteRelationshipSentence(noteSummary),
         readingGuide: "先看这一小节的和弦，再看它在全局调性中的级数，最后看音符是否属于当前和声。",
+        harmonicContextSummary,
         cautions,
       };
     });
+}
+
+function buildHarmonicContextSummary(ctx: MeasureHarmonicContext): string {
+  if (ctx.confidence === "low") {
+    return "本小节没有检测到可用的和弦上下文。";
+  }
+  const label = ctx.primary_chord_label ?? "unknown";
+  const roman = ctx.primary_roman_numeral ? ` / ${ctx.primary_roman_numeral}` : "";
+  const func = formatHarmonicFunctionForStudent(ctx.primary_harmonic_function);
+  const confidenceLabel = ctx.confidence === "supported" ? "可信" : "部分支持";
+  return `主要和声：${label}${roman}，功能为${func}（${confidenceLabel}）。`;
 }
 
 function buildMeasureNoteRelationshipSentence(summary: NoteSummary) {
@@ -1682,6 +1709,7 @@ function formatMeasureWalkthroughsForMarkdown(walkthroughs: MeasureWalkthrough[]
   const lines: string[] = [];
   for (const walkthrough of walkthroughs) {
     lines.push(`### Measure ${walkthrough.measureNumber}`, "");
+    lines.push(`- Harmonic context: ${walkthrough.harmonicContextSummary}`);
     lines.push("- Chords:");
     for (const chordSummary of walkthrough.chordSummaries) {
       lines.push(`  - ${chordSummary}`);

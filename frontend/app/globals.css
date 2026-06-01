@@ -494,6 +494,15 @@ dd {
   font-weight: 700;
 }
 
+.walkthrough-harmonic-context {
+  margin: 8px 0 0;
+  padding: 8px 10px;
+  border-left: 3px solid #b9c9f4;
+  background: #f0f4ff;
+  color: #2453a6;
+  font-size: 14px;
+}
+
 .walkthrough-block,
 .walkthrough-cautions {
   margin-bottom: 12px;

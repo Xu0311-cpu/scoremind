@@ -1,103 +1,70 @@
-# MVP 3.3 Release Notes
+# MVP 3.4 Release Notes
 
 ## Release Purpose
 
-MVP 3.3 aligns documentation, demo flow, screenshot guidance, and portfolio language with the current MVP 3.3 product state. No new runtime capability was added.
+MVP 3.4 adds a measure-level harmonic context layer derived from existing detected chords. Each measure now reports its primary chord label, Roman numeral, harmonic function, and confidence level. This is a structure-and-explanation improvement, not a new advanced music-theory analyzer.
 
 ## What Changed
 
-- README updated to reflect current capabilities: Score Input Workspace, Download Learning Report, improved error/empty states, and Chinese student-facing analysis polish.
-- `docs/PORTFOLIO.md` updated to match MVP 3.3 product positioning and resume-ready bullets.
-- `docs/DEMO_FLOW.md` updated with a 10-step demo script covering Score Input Workspace, sample download, upload, analysis, Student Analysis, Measure Walkthrough, Technical Evidence, and Learning Report download.
-- `docs/SCREENSHOT_GUIDE.md` updated with recommended screenshots for Score Input Workspace, Score Preview, Student Analysis, Measure Walkthrough, Technical Evidence, and Download Learning Report.
-- All version strings updated to 3.3.0.
+- Added `harmonic_context` field to each measure in the analysis response.
+- Each measure reports: primary chord label, root, quality, Roman numeral, harmonic function, context source, confidence, and warnings.
+- Confidence labels: `supported` (Roman numeral and function exist), `partial` (chord exists but Roman/function missing), `low` (no detected chord).
+- Selection rule: prefers supported chords with Roman numeral and function; falls back to first detected chord with partial confidence; reports low confidence when no chord exists.
+- Measure Walkthrough in Student Analysis now shows harmonic context summary.
+- Learning Report includes harmonic context in Measure Walkthrough section.
+- All version strings updated to 3.4.0.
 
 ## What Did Not Change
 
-- Backend analysis algorithms are unchanged.
+- Chord detection algorithm is unchanged.
+- Key detection algorithm is unchanged.
+- Roman numeral algorithm is unchanged.
+- No passing tone / neighbor tone analysis added.
+- No cadence analysis added.
+- No local modulation added.
+- No melody or voice-leading analysis added.
 - Supported upload formats remain `.musicxml` and `.xml` only.
-- PDF/image/OMR upload is still not supported at runtime.
-- No real LLM/OpenAI integration.
-- No database, authentication, or user accounts.
-- Expert Review is not reintroduced.
-- No new music-theory analysis was added.
+- No PDF/image/OMR runtime support.
+- No LLM/database/auth/Expert Review.
+- No new dependencies.
+
+## Harmonic Context Schema
+
+```python
+class MeasureHarmonicContext(BaseModel):
+    primary_chord_label: str | None      # e.g. "C major"
+    primary_root: str | None             # e.g. "C"
+    primary_quality: ChordQuality        # e.g. "major"
+    primary_roman_numeral: str | None    # e.g. "I"
+    primary_harmonic_function: str       # e.g. "tonic"
+    context_source: str                  # "detected_chord" or "no_detected_chord"
+    confidence: str                      # "supported", "partial", or "low"
+    warnings: list[str]
+```
 
 ## Current Capabilities
 
 - Score Input Workspace with distinct supported, export-first, research-only, and out-of-scope paths.
 - Upload `.musicxml` and `.xml` files.
-- Render a MusicXML score preview in the frontend.
-- Run deterministic backend analysis for:
-  - basic triads and seventh chords
-  - global key
-  - Roman numerals in a global-key context
-  - basic harmonic function labels
-  - conservative note-level chord-tone membership
-  - carried previous chord context within a measure
-- Show Student Analysis with polished Chinese explanations.
-- Show Process Explanation, Measure Walkthrough, Terminology Guide, and Technical Evidence.
+- Render a MusicXML score preview.
+- Deterministic backend analysis for chords, global key, Roman numerals, harmonic functions, note-level harmony membership, and measure-level harmonic context.
+- Student Analysis with polished Chinese explanations and harmonic context summaries.
+- Process Explanation, Measure Walkthrough, Terminology Guide, and Technical Evidence.
 - Generate, copy, or download a Markdown Learning Report.
 - Bilingual error and empty states.
-- Download demo MusicXML sample files from the frontend.
-
-## Intentionally Unsupported
-
-- PDF upload.
-- Image or screenshot upload.
-- OMR.
-- Automatic file conversion.
-- `.mxl`, audio, MIDI, or notation-project file upload.
-- Real OpenAI/LLM integration.
-- Database persistence, authentication, accounts, marketplace, or expert-review workflow.
-- Passing tone, neighbor tone, suspension, appoggiatura, melody, voice-leading, local modulation, or jazz/modern harmony analysis.
-
-## How To Run The Demo
-
-Start the backend:
-
-```bash
-cd backend
-pip install -e ".[dev]"
-uvicorn app.main:app --reload
-```
-
-Start the frontend:
-
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-Open:
-
-```text
-http://localhost:3000
-```
-
-See `docs/DEMO_FLOW.md` for a full step-by-step demo script.
 
 ## Validation Status
 
-Backend test suite:
-
-- `pytest`
-- Expected status for MVP 3.3: all tests passing.
-
-Frontend build:
-
-- `npm run build`
-- Expected status for MVP 3.3: build passing.
+- Backend: 33 tests passing (4 new harmonic context tests).
+- Frontend: build passing.
 
 ## Known Limitations
 
-- Analysis is only as reliable as the uploaded MusicXML.
-- Chord detection is based on vertical pitch sets at identical offsets.
-- Carried context is a conservative within-measure fallback, not full sustained harmony inference.
-- Roman numeral analysis uses the detected global key only.
-- Note-level results are harmony-membership labels, not full melodic interpretation.
+- Harmonic context is derived from detected chords only; it does not perform cadence analysis, modulation detection, or phrase-level harmonic analysis.
+- Confidence is `partial` when Roman numeral or harmonic function is not in the supported set.
+- Confidence is `low` when no chord is detected in the measure.
 - PDF/image/OMR input is future work.
 
 ## Future Roadmap
 
-See `docs/ROADMAP.md` for future work. Future items are not current MVP 3.3 capabilities unless explicitly implemented in the application.
+See `docs/ROADMAP.md` for future work.

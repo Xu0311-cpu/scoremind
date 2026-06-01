@@ -18,6 +18,7 @@ ChordQuality = Literal[
 ]
 
 HarmonicFunction = Literal["tonic", "predominant", "dominant", "unknown"]
+HarmonicContextConfidence = Literal["supported", "partial", "low"]
 NoteRole = Literal["chord_tone", "non_chord_tone", "unknown"]
 PossibleNonChordToneType = Literal["possible_passing_tone", "possible_neighbor_tone"]
 NoteContextSource = Literal["same_offset", "carried_previous_chord", "none"]
@@ -131,6 +132,32 @@ class DetectedChord(BaseModel):
     evidence: ChordEvidence = Field(description="Deterministic evidence used to audit this chord analysis.")
 
 
+class MeasureHarmonicContext(BaseModel):
+    primary_chord_label: str | None = Field(
+        default=None,
+        description="Human-readable chord label such as C major or G dominant_seventh.",
+    )
+    primary_root: str | None = Field(default=None, description="Root of the primary chord.")
+    primary_quality: ChordQuality = Field(
+        default="unknown", description="Quality of the primary chord."
+    )
+    primary_roman_numeral: str | None = Field(
+        default=None, description="Roman numeral of the primary chord when available."
+    )
+    primary_harmonic_function: HarmonicFunction = Field(
+        default="unknown", description="Harmonic function of the primary chord."
+    )
+    context_source: Literal["detected_chord", "no_detected_chord"] = Field(
+        description="Whether the context was derived from a detected chord or not."
+    )
+    confidence: HarmonicContextConfidence = Field(
+        description="supported if roman_numeral and function exist, partial if chord exists but roman/function missing, low if no chord."
+    )
+    warnings: list[str] = Field(
+        default_factory=list, description="Warnings for this harmonic context."
+    )
+
+
 class MeasureAnalysis(BaseModel):
     measure_number: int = Field(description="MusicXML measure number.")
     notes: list[NoteEvent] = Field(description="Flattened note events extracted from this measure.")
@@ -142,6 +169,9 @@ class MeasureAnalysis(BaseModel):
     )
     analyzed_notes: list[AnalyzedNoteEvent] = Field(
         description="Note-level membership check against same-offset or carried previous chord context."
+    )
+    harmonic_context: MeasureHarmonicContext = Field(
+        description="Measure-level harmonic context derived from detected chords."
     )
 
 
