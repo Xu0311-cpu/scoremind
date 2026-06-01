@@ -1,16 +1,20 @@
-# MVP 3.1 Release Notes
+# MVP 3.2 Release Notes
 
 ## Release Purpose
 
-MVP 3.1 polishes error messages and empty states so ScoreMind feels more robust and understandable when users make mistakes or the backend is unavailable. Error messages are now bilingual (English/Chinese) and student-friendly. Empty states provide clearer guidance. No new analysis capability was added.
+MVP 3.2 polishes the Chinese student-facing reading experience. Global key, chord progression, harmonic function, note-level relationship, context reliability, terminology guide, and measure walkthrough explanations are now more natural and concise in Chinese. No new analysis capability was added.
 
 ## What Changed
 
-- Error messages for unsupported file type, no file selected, analysis failure, explanation failure, and backend unavailability are now bilingual and more descriptive.
-- Score rendering failure message now explains that analysis may still work.
-- Clipboard unavailability message now suggests manual copy.
-- Empty states for no chord analysis, no note analysis, and filter mismatch are now more helpful.
-- All version strings updated to 3.1.0.
+- Global key summary now explains that all subsequent chord and function analysis is based on the detected key.
+- Chord progression lines use more natural Chinese phrasing.
+- Harmonic function explanations are clearer and include concrete examples.
+- Note-level relationship explanations use simpler Chinese.
+- Context reliability explanations now use Chinese-first terminology with English in parentheses.
+- Terminology Guide definitions are shorter and more concise, with Chinese helper labels.
+- Measure Walkthrough summaries use more natural Chinese phrasing.
+- Learning hints are rewritten in clearer Chinese.
+- All version strings updated to 3.2.0.
 
 ## What Did Not Change
 
@@ -80,12 +84,12 @@ http://localhost:3000
 Backend test suite:
 
 - `pytest`
-- Expected status for MVP 3.1: all tests passing.
+- Expected status for MVP 3.2: all tests passing.
 
 Frontend build:
 
 - `npm run build`
-- Expected status for MVP 3.1: build passing.
+- Expected status for MVP 3.2: build passing.
 
 ## Known Limitations
 
@@ -98,4 +102,4 @@ Frontend build:
 
 ## Future Roadmap
 
-See `docs/ROADMAP.md` for future work. Future items are not current MVP 3.1 capabilities unless explicitly implemented in the application.
+See `docs/ROADMAP.md` for future work. Future items are not current MVP 3.2 capabilities unless explicitly implemented in the application.

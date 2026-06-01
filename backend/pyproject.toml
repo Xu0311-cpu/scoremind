@@ -1,6 +1,6 @@
 [project]
 name = "music-score-analysis-backend"
-version = "3.1.0"
+version = "3.2.0"
 description = "MVP FastAPI backend for MusicXML symbolic chord analysis."
 requires-python = ">=3.11"
 dependencies = [

@@ -188,55 +188,55 @@ const INPUT_SOURCE_OPTIONS: InputSourceOption[] = [
 ];
 
 const LEARNING_HINTS = [
-  "先看调性，再看每小节和弦，再看音符是否属于当前和声。",
-  "Non-chord tone candidate 只表示这个音不属于当前选定和弦上下文，不等于系统已经判断它是经过音或辅助音。",
-  "Carried context 比 same-offset context 更弱，只能作为保守参考。",
+  "阅读顺序建议：先看全局调性，再看每小节的和弦级数和功能，最后看音符是否属于当前和声。",
+  "非和弦音候选只表示该音不属于当前和弦，不等于系统已经判断它是经过音或辅助音。",
+  "沿用前和弦（carried context）比同拍点和声（same offset）的可信度更弱，只能作为保守参考。",
 ];
 
 const TERMINOLOGY_GUIDE: TerminologyItem[] = [
   {
     term: "Global key / 全局调性",
-    explanation: "系统对整段 MusicXML 做出的单一调性判断；当前 MVP 不分析局部转调。",
+    explanation: "系统对整段乐谱做出的单一调性判断，例如 C major。当前不分析局部转调。",
   },
   {
     term: "Roman numeral / 罗马数字",
-    explanation: "把和弦放到全局调性中表示级数，例如 C major 中的 C 和弦是 I。",
+    explanation: "把和弦放到调性中表示级数。例如 C major 里的 C 和弦是 I 级，G 和弦是 V 级。",
   },
   {
     term: "Harmonic function / 和声功能",
-    explanation: "当前 MVP 的基础功能分类，只包含 tonic、predominant、dominant、unknown。",
+    explanation: "和弦在调性中的角色分类：tonic（稳定）、predominant（准备）、dominant（倾向解决）、unknown（无法判断）。",
   },
   {
-    term: "tonic / 主功能 / 稳定",
-    explanation: "听感上较稳定、像回到中心的功能标签。",
+    term: "tonic / 主功能",
+    explanation: "听感上较稳定，像回到中心。例如 I 级和 vi 级。",
   },
   {
-    term: "predominant / 下属准备功能",
-    explanation: "通常准备走向属功能的功能标签。",
+    term: "predominant / 下属功能",
+    explanation: "通常为属功能做铺垫。例如 ii 级和 IV 级。",
   },
   {
-    term: "dominant / 属功能 / 倾向解决",
-    explanation: "带有走向主功能倾向的功能标签。",
+    term: "dominant / 属功能",
+    explanation: "带有走向主功能的倾向。例如 V 级和 vii 级。",
   },
   {
     term: "chord tone / 和弦音",
-    explanation: "该音的 pitch class 属于当前选定和弦上下文。",
+    explanation: "该音属于当前和弦。例如 C 和弦中的 C、E、G 都是和弦音。",
   },
   {
     term: "non-chord tone candidate / 非和弦音候选",
-    explanation: "该音不属于当前选定和弦上下文；这不是经过音、辅助音等完整分类。",
+    explanation: "该音不属于当前和弦，但系统还没有做完整的古典非和弦音分类。",
   },
   {
-    term: "same-offset harmony / 同一拍点的和声",
-    explanation: "音符和检测到的和弦出现在同一个小节 offset。",
+    term: "same-offset harmony / 同拍点和声",
+    explanation: "音符和和弦同时出现，是最直接的参考依据。",
   },
   {
-    term: "carried previous chord / 沿用同小节前一个和弦作为参考",
-    explanation: "当前位置没有同 offset 和弦时，保守使用同小节内更早的最近和弦。",
+    term: "carried previous chord / 沿用前和弦",
+    explanation: "当前拍点没有新和弦时，系统沿用同小节内最近的和弦作为保守参考。",
   },
   {
-    term: "unknown / 暂无可用上下文",
-    explanation: "系统没有足够的当前和声上下文，因此不做进一步判断。",
+    term: "unknown / 无上下文",
+    explanation: "系统没有足够的和声信息来判断该音的归属。",
   },
 ];
 
@@ -537,7 +537,7 @@ export default function Home() {
       <section className="workspace">
         <header className="page-header">
           <div>
-            <p className="eyebrow">MVP 3.1</p>
+            <p className="eyebrow">MVP 3.2</p>
             <h1>ScoreMind</h1>
             <p className="product-subtitle">AI Music Score Understanding</p>
           </div>
@@ -617,7 +617,7 @@ export default function Home() {
               ) : (
                 <div className="unsupported-source-note">
                   <p>
-                    This source is guidance-only in MVP 3.1. The runtime upload control still accepts only
+                    This source is guidance-only in MVP 3.2. The runtime upload control still accepts only
                     {" "}.musicxml and .xml files after you export or convert externally.
                   </p>
                 </div>
@@ -1303,28 +1303,27 @@ function buildStudentSummary(analysis: MusicXMLAnalysisResponse): StudentSummary
   const noteSummary = summarizeNotes(analysis.measures.flatMap((measure) => measure.analyzed_notes ?? []));
   const keySummary =
     analysis.key_analysis.tonic && analysis.key_analysis.mode
-      ? `系统检测到的全局调性是 ${analysis.key_analysis.tonic} ${analysis.key_analysis.mode}。`
-      : "系统当前没有检测到可用的全局调性。";
+      ? `系统检测到的全局调性为 ${analysis.key_analysis.tonic} ${analysis.key_analysis.mode}，后续和弦级数和功能判断都基于这个调性。`
+      : "系统没有检测到可靠的全局调性，后续罗马数字和功能标签需要更谨慎阅读。";
 
   const chordLines = chords.slice(0, 8).map((chord) => {
     const chordLabel = formatChordLabel(chord);
     const functionLabel = formatHarmonicFunctionForStudent(chord.harmonic_function);
     const romanText = chord.roman_numeral
-      ? `在当前调性中是 ${chord.roman_numeral} 级`
-      : "当前 MVP 没有给出支持的罗马数字";
-    return `第 ${chord.measure_number} 小节：${chordLabel}，${romanText}，功能是 ${chord.harmonic_function}（${functionLabel}）。`;
+      ? `对应 ${chord.roman_numeral} 级`
+      : "罗马数字不在当前支持范围内";
+    return `第 ${chord.measure_number} 小节：${chordLabel}，${romanText}，功能为 ${functionLabel}。`;
   });
 
   if (chords.length > 8) {
-    chordLines.push(`还有 ${chords.length - 8} 个和弦没有在学生摘要中展开，可在 Technical Evidence 查看。`);
+    chordLines.push(`还有 ${chords.length - 8} 个和弦未在此展示，可切换到 Technical Evidence 查看完整列表。`);
   }
 
   const limitations = [
-    "Student View 只是把后端已经产生的确定性结果换成更容易读的中文，不新增音乐理论结论。",
-    "Process Explanation 只按学习顺序重排已有字段，不做新的和声、旋律或声部推断。",
-    "非和弦音候选只表示该音不属于所选和弦上下文，不是完整的古典非和弦音分类。",
-    "系统还不会识别 passing tone、neighbor tone、suspension、appoggiatura。",
-    "系统还不会做完整旋律分析、声部进行分析、局部转调或完整持续和声推断。",
+    "这里展示的都是后端已有的分析结果，只是换成了更容易理解的中文，不会新增任何音乐理论结论。",
+    "非和弦音候选只表示该音不属于当前和弦上下文，不等于已经判断它是经过音或辅助音。",
+    "系统还不能识别 passing tone、neighbor tone、suspension、appoggiatura 等古典非和弦音类型。",
+    "系统还不能做完整旋律分析、声部进行分析、局部转调或持续和声推断。",
   ];
 
   return {
@@ -1332,12 +1331,12 @@ function buildStudentSummary(analysis: MusicXMLAnalysisResponse): StudentSummary
     chordLines,
     noteSummary:
       noteSummary.total > 0
-        ? `系统已完成 ${noteSummary.total} 个音的和声归属检查。详细分类数量请在 Technical Evidence / 技术证据中查看。`
-        : "当前没有可展示的音符级分析。",
+        ? `系统共分析了 ${noteSummary.total} 个音的和声归属。具体分类可在 Technical Evidence 中查看。`
+        : "当前乐谱没有返回可展示的音符级分析。",
     contextExplanation: [
-      "Same-offset context 表示音符和检测到的和弦出现在同一个小节 offset，是最直接的参考。",
-      "Carried previous chord context 表示同一小节当前位置没有新和弦时，系统保守使用前面最近的检测和弦，可信度比 same-offset 更弱。",
-      "No harmony context 表示该音没有同 offset 和弦，也没有同小节内更早的检测和弦可用，因此暂不判断。",
+      "同拍点和声（same offset）：音符和和弦同时出现，是最直接的参考。",
+      "沿用前和弦（carried previous chord）：当前拍点没有新和弦时，系统沿用同小节内最近的和弦，可信度稍弱。",
+      "无上下文（none）：该拍点没有可用和弦，系统暂不判断。",
     ],
     processSteps: buildProcessSteps(analysis, chords, chordLines, noteSummary, limitations),
     measureWalkthroughs: buildMeasureWalkthroughs(analysis.measures),
@@ -1355,49 +1354,49 @@ function buildProcessSteps(
 ): ProcessStep[] {
   const keyLine =
     analysis.key_analysis.tonic && analysis.key_analysis.mode
-      ? `系统检测到的全局调性是 ${analysis.key_analysis.tonic} ${analysis.key_analysis.mode}。`
-      : "当前结果没有可靠的全局调性，后续罗马数字和功能标签需要更谨慎阅读。";
+      ? `系统检测到的全局调性为 ${analysis.key_analysis.tonic} ${analysis.key_analysis.mode}。后续所有和弦级数和功能判断都基于这个调性。`
+      : "系统没有检测到可靠的全局调性，后续罗马数字和功能标签需要更谨慎阅读。";
   const chordProgressionLines =
-    chords.length > 0 ? chordLines.slice(0, 8) : ["当前结果没有检测到可展示的和弦进行。"];
-  const warningLines = analysis.warnings.length > 0 ? analysis.warnings : ["后端没有返回额外 warning。"];
+    chords.length > 0 ? chordLines.slice(0, 8) : ["当前乐谱没有检测到可展示的和弦进行。"];
+  const warningLines = analysis.warnings.length > 0 ? analysis.warnings : ["后端没有返回额外提示。"];
 
   return [
     {
-      title: "Step 1: Global key",
+      title: "第一步：全局调性",
       lines: [keyLine],
     },
     {
-      title: "Step 2: Chord progression",
+      title: "第二步：和弦进行",
       lines: chordProgressionLines,
     },
     {
-      title: "Step 3: Harmonic function",
+      title: "第三步：和声功能",
       lines: [
-        "tonic 表示主功能 / 稳定。",
-        "predominant 表示准备功能，通常准备走向属功能。",
-        "dominant 表示属功能 / 倾向解决。",
-        "unknown 表示当前 MVP 没有足够支持把它归入基础功能集合。",
+        "tonic（主功能）：听感上比较稳定，像回到了中心。",
+        "predominant（下属功能）：通常为属功能做铺垫。",
+        "dominant（属功能）：带有走向主功能的倾向。",
+        "unknown：系统没有足够信息来判断功能归属。",
       ],
     },
     {
-      title: "Step 4: Note-level relationship",
+      title: "第四步：音符与和声关系",
       lines: [
-        `当前共分析 ${noteSummary.total} 个音；详细分类数量保留在 Technical Evidence / 技术证据中。`,
-        "chord tone 表示音符 pitch class 属于当前选定和弦上下文。",
-        "non-chord tone candidate 只表示音符不属于当前选定和弦上下文，不是完整旋律分类。",
-        "unknown 表示当前没有可用和声上下文。",
+        `当前共分析 ${noteSummary.total} 个音。具体分类可在 Technical Evidence 中查看。`,
+        "chord tone（和弦音）：该音属于当前和弦。",
+        "non-chord tone candidate（非和弦音候选）：该音不属于当前和弦，但还没做完整分类。",
+        "unknown：当前没有可用和声上下文，暂不判断。",
       ],
     },
     {
-      title: "Step 5: Context strength",
+      title: "第五步：上下文可信度",
       lines: [
-        "same_offset 是直接上下文。",
-        "carried_previous_chord 是较弱的保守上下文。",
-        "none 表示没有可用和声上下文。",
+        "同拍点和声（same offset）：最直接的参考，可信度最高。",
+        "沿用前和弦（carried previous chord）：保守参考，可信度稍弱。",
+        "无上下文（none）：没有可用和弦，暂不判断。",
       ],
     },
     {
-      title: "Step 6: What still needs caution",
+      title: "第六步：需要注意的限制",
       lines: [...limitations, ...warningLines],
     },
   ];
@@ -1412,20 +1411,20 @@ function buildMeasureWalkthroughs(measures: MeasureAnalysis[]): MeasureWalkthrou
         measure.detected_chords.length > 0
           ? measure.detected_chords.map((chord) => {
               const chordLabel = formatChordLabel(chord);
-              const romanText = chord.roman_numeral ? `，罗马数字 ${chord.roman_numeral}` : "，罗马数字暂不支持";
+              const romanText = chord.roman_numeral ? `，对应 ${chord.roman_numeral} 级` : "，罗马数字不在当前支持范围内";
               const functionLabel = formatHarmonicFunctionForStudent(chord.harmonic_function);
-              return `${chordLabel}${romanText}，功能是 ${chord.harmonic_function}（${functionLabel}）。`;
+              return `这一小节主要是 ${chordLabel}${romanText}，功能上${functionLabel}。`;
             })
           : ["当前小节没有检测到可展示的和弦。"];
       const cautions: string[] = [];
       if (noteSummary.carriedContext > 0) {
-        cautions.push("本小节有音符使用 carried context，说明系统沿用同小节前一个和弦作为保守参考。");
+        cautions.push("本小节有音符使用了沿用前和弦（carried context），说明系统沿用了同小节前面的和弦作为参考。");
       }
       if (noteSummary.unknown > 0) {
-        cautions.push("本小节有音符缺少可用和声上下文，因此暂不判断。");
+        cautions.push("本小节有音符缺少可用和声上下文，系统暂不判断其归属。");
       }
       if (measure.detected_chords.some((chord) => chord.roman_numeral === null)) {
-        cautions.push("该和弦的罗马数字不在当前 MVP 支持集合内。");
+        cautions.push("该和弦的罗马数字不在当前支持范围内。");
       }
       if (measure.detected_chords.some((chord) => chord.harmonic_function === "unknown")) {
         cautions.push("本小节有和弦的功能标签为 unknown，需要谨慎阅读。");
@@ -1436,7 +1435,7 @@ function buildMeasureWalkthroughs(measures: MeasureAnalysis[]): MeasureWalkthrou
         chordSummaries,
         noteSummary,
         noteRelationshipSentence: buildMeasureNoteRelationshipSentence(noteSummary),
-        readingGuide: "先看这个小节的和弦，再看它在全局调性中的级数，最后看音符是否属于当前和声。",
+        readingGuide: "先看这一小节的和弦，再看它在全局调性中的级数，最后看音符是否属于当前和声。",
         cautions,
       };
     });
@@ -1447,32 +1446,32 @@ function buildMeasureNoteRelationshipSentence(summary: NoteSummary) {
     return "本小节没有可展示的音符级分析。";
   }
   if (summary.chordTone === summary.total) {
-    return `本小节 ${summary.total} 个音都属于当前和声。`;
+    return `本小节所有 ${summary.total} 个分析音都属于当前和声。`;
   }
   const parts: string[] = [];
   if (summary.chordTone > 0) {
-    parts.push(`${summary.chordTone} 个音属于当前和声`);
+    parts.push(`${summary.chordTone} 个属于当前和声`);
   }
   if (summary.nonChordTone > 0) {
-    parts.push(`${summary.nonChordTone} 个非和弦音候选，需要谨慎理解`);
+    parts.push(`${summary.chordTone > 0 ? "" : "有"}${summary.nonChordTone} 个非和弦音候选`);
   }
   if (summary.unknown > 0) {
-    parts.push(`${summary.unknown} 个音缺少和声上下文`);
+    parts.push(`${summary.chordTone + summary.nonChordTone > 0 ? "" : "有"}${summary.unknown} 个缺少和声上下文`);
   }
   return `本小节有 ${parts.join("，")}。`;
 }
 
 function formatHarmonicFunctionForStudent(harmonicFunction: string) {
   if (harmonicFunction === "tonic") {
-    return "主功能 / 稳定";
+    return "比较稳定（主功能）";
   }
   if (harmonicFunction === "predominant") {
-    return "准备功能";
+    return "为属功能做铺垫（下属功能）";
   }
   if (harmonicFunction === "dominant") {
-    return "属功能 / 倾向解决";
+    return "倾向于解决到主功能（属功能）";
   }
-  return "未知";
+  return "功能未知";
 }
 
 function formatRelatedChord(note: AnalyzedNote) {
