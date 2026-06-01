@@ -1,10 +1,10 @@
-# ScoreMind — AI Music Score Understanding (MVP 3.4.1.1)
+# ScoreMind — AI Music Score Understanding (MVP 3.4.1)
 
 ScoreMind is a deterministic MusicXML score understanding tool for music students. It parses symbolic score data, analyzes basic harmony and note-level chord membership, renders a score preview, and turns the result into student-friendly learning views.
 
-Current release: MVP 3.4.1.1. Current uploads remain limited to `.musicxml` and `.xml`.
+Current release: MVP 3.4.1. Current uploads remain limited to `.musicxml` and `.xml`.
 
-MVP 3.4.1.1 hardens the measure-level harmonic context layer for backward compatibility and conservative wording. Old analysis JSON without `harmonic_context` is now accepted by the explanation endpoint. Field names use "selected" instead of "primary" to avoid overclaiming. Multiple detected chords now produce a warning that the context is a representative reference.
+MVP 3.4.1 hardens the measure-level harmonic context layer for backward compatibility and conservative wording. Old analysis JSON without `harmonic_context` is now accepted by the explanation endpoint. Field names use "selected" instead of "primary" to avoid overclaiming. Multiple detected chords now produce a warning that the context is a representative reference.
 
 ## Why I Built This
 

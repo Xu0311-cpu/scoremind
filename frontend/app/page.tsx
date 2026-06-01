@@ -1427,7 +1427,7 @@ function buildMeasureWalkthroughs(measures: MeasureAnalysis[]): MeasureWalkthrou
               const chordLabel = formatChordLabel(chord);
               const romanText = chord.roman_numeral ? `，对应 ${chord.roman_numeral} 级` : "，罗马数字不在当前支持范围内";
               const functionLabel = formatHarmonicFunctionForStudent(chord.harmonic_function);
-              return `这一小节主要是 ${chordLabel}${romanText}，功能上${functionLabel}。`;
+              return `检测到和弦参考：${chordLabel}${romanText}，功能上${functionLabel}。`;
             })
           : ["当前小节没有检测到可展示的和弦。"];
       const ctx = measure.harmonic_context;
