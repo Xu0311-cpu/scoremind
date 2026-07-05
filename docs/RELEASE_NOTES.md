@@ -32,7 +32,7 @@ MVP 3.5 adds conservative non-chord tone candidate hints for student learning. T
 ```python
 class NonChordToneCandidate(BaseModel):
     kind: Literal["passing_tone_candidate", "neighbor_tone_candidate", "unknown_non_chord_tone_candidate", "not_applicable"]
-    confidence: Literal["low", "medium"]  # never "high" in MVP 3.5
+    confidence: Literal["low"]
     reason: str
     limitations: list[str]
 ```

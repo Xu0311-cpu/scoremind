@@ -911,7 +911,7 @@ def test_nct_non_stepwise_motion_returns_unknown() -> None:
     assert nct.kind == "unknown_non_chord_tone_candidate"
 
 
-# ── MVP 3.5.1 Hardening Tests ──────────────────────────────────────────
+# ── MVP 3.5 Hardening Tests ────────────────────────────────────────────
 
 
 def test_nct_same_offset_adjacency_returns_unknown() -> None:
