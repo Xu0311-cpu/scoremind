@@ -21,6 +21,13 @@ HarmonicFunction = Literal["tonic", "predominant", "dominant", "unknown"]
 HarmonicContextConfidence = Literal["supported", "partial", "low"]
 NoteRole = Literal["chord_tone", "non_chord_tone", "unknown"]
 PossibleNonChordToneType = Literal["possible_passing_tone", "possible_neighbor_tone"]
+NonChordToneCandidateKind = Literal[
+    "passing_tone_candidate",
+    "neighbor_tone_candidate",
+    "unknown_non_chord_tone_candidate",
+    "not_applicable",
+]
+NonChordToneCandidateConfidence = Literal["low"]
 NoteContextSource = Literal["same_offset", "carried_previous_chord", "none"]
 
 
@@ -47,6 +54,15 @@ class ChordEvidence(BaseModel):
     global_key_context: str | None = Field(default=None, description="Global key context used for Roman numeral analysis.")
     analysis_scope: list[str] = Field(description="Scope assumptions that apply to this chord analysis.")
     warnings: list[str] = Field(description="Diagnostics warnings for this chord analysis.")
+
+
+class NonChordToneCandidate(BaseModel):
+    kind: NonChordToneCandidateKind = Field(description="Conservative non-chord tone candidate kind.")
+    confidence: NonChordToneCandidateConfidence = Field(
+        default="low", description="Confidence level. Never high in MVP 3.5."
+    )
+    reason: str = Field(description="Human-readable reason for the candidate label.")
+    limitations: list[str] = Field(description="Known limitations of this candidate classification.")
 
 
 class NoteEvent(BaseModel):
@@ -105,6 +121,10 @@ class AnalyzedNoteEvent(BaseModel):
     possible_non_chord_tone_type: PossibleNonChordToneType | None = Field(
         default=None,
         description="Reserved for future conservative melodic labels; null in the current MVP.",
+    )
+    non_chord_tone_candidate: NonChordToneCandidate | None = Field(
+        default=None,
+        description="Conservative non-chord tone candidate analysis for student learning. Null when not yet computed.",
     )
     evidence: NoteAnalysisEvidence = Field(description="Deterministic evidence for the note-level label.")
 

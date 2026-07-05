@@ -1,6 +1,6 @@
 # Roadmap
 
-This roadmap describes future work. Items listed here are not current MVP 3.3 capabilities unless explicitly implemented elsewhere.
+This roadmap describes future work. Items listed here are not current MVP 3.5 capabilities unless explicitly implemented elsewhere.
 
 ## Current / Completed
 
@@ -9,6 +9,7 @@ This roadmap describes future work. Items listed here are not current MVP 3.3 ca
 - Runtime MusicXML/XML upload and deterministic analysis.
 - Learning Report download as a `.md` file.
 - Isolated OMR feasibility research outside the production app.
+- Conservative non-chord tone candidate hints (passing/neighbor tone candidates) for student learning.
 
 ## Near Term
 
@@ -22,7 +23,6 @@ This roadmap describes future work. Items listed here are not current MVP 3.3 ca
 ## Mid Term
 
 - Strengthen note-level analysis while remaining conservative.
-- Add carefully bounded non-chord tone candidate heuristics.
 - Improve handling of ties and sustained notes.
 - Expand supported chord and Roman numeral cases.
 - Add more robust confidence and warning signals.
@@ -39,4 +39,4 @@ This roadmap describes future work. Items listed here are not current MVP 3.3 ca
 
 ## Current Boundary
 
-The current system is MusicXML/XML only. MVP 3.3 includes a polished Score Input Workspace and active OMR feasibility research, but the runtime app still does not perform OMR, PDF/image upload, MIDI/audio analysis, local modulation, passing tone detection, neighbor tone detection, full sustained harmony inference, melody analysis, voice-leading analysis, or jazz/modern harmony analysis.
+The current system is MusicXML/XML only. MVP 3.5 includes conservative non-chord tone candidate hints (possible passing tone, possible neighbor tone) for student learning, but the runtime app still does not perform OMR, PDF/image upload, MIDI/audio analysis, local modulation, full classical non-chord tone classification, full sustained harmony inference, melody analysis, voice-leading analysis, or jazz/modern harmony analysis.

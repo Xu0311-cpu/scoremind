@@ -17,6 +17,7 @@ from app.schemas.analysis import (
     KeyAnalysis,
     MeasureAnalysis,
     MeasureHarmonicContext,
+    NonChordToneCandidate,
     NoteAnalysisEvidence,
     MusicXMLAnalysisResponse,
     NoteEvent,
@@ -80,20 +81,22 @@ def _build_measure_harmonic_context(detected_chords: list[DetectedChord]) -> Mea
     )
 
 MVP_WARNINGS = [
-    "MVP 3.4.1 detects chords only from simultaneous pitch sets at identical offsets.",
+    "MVP 3.5 detects chords only from simultaneous pitch sets at identical offsets.",
     "Enharmonic spelling is not key-aware.",
     "Inversion is estimated from the lowest detected pitch.",
     "Roman numeral analysis is based only on the detected global key.",
     "No local modulation or secondary dominant analysis is performed.",
     "Harmonic function labels are basic MVP classifications.",
-    "MVP 3.4.1 note-level analysis prefers same-offset harmony, then may use carried previous chord context within the same measure.",
+    "MVP 3.5 note-level analysis prefers same-offset harmony, then may use carried previous chord context within the same measure.",
     "Carried harmony context is a conservative MVP approximation.",
     "It does not perform full sustained harmony, phrase-level harmony, or voice-leading analysis.",
     "A non_chord_tone role means the note is not part of the selected chord context; it is not full classical non-chord tone classification.",
-    "Passing tone and neighbor tone detection are not performed in MVP 3.4.1.",
+    "Non-chord tone candidate labels are conservative learning hints, not definitive music-theory conclusions.",
+    "Passing tone and neighbor tone candidates are detected only from simple same-measure adjacent pitch motion.",
+    "Confidence for non-chord tone candidates is never high in MVP 3.5.",
 ]
 
-ANALYSIS_VERSION = "3.4.1"
+ANALYSIS_VERSION = "3.5"
 ANALYSIS_SCOPE = [
     "musicxml_input_only",
     "same_offset_vertical_pitch_set",
@@ -101,6 +104,7 @@ ANALYSIS_SCOPE = [
     "basic_triad_and_seventh_chords",
     "note_level_chord_tone_labeling",
     "carried_previous_chord_within_measure",
+    "conservative_non_chord_tone_candidate_labels",
 ]
 
 
@@ -109,7 +113,7 @@ async def analyze_musicxml(file: UploadFile) -> MusicXMLAnalysisResponse:
     if not _looks_like_musicxml(file.filename):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Only .musicxml and .xml files are supported in MVP 3.4.1.",
+            detail="Only .musicxml and .xml files are supported in MVP 3.5.",
         )
 
     content = await file.read()
@@ -248,6 +252,15 @@ def _to_analyzed_note_response(item: AnalyzedNote) -> AnalyzedNoteEvent:
             roman_numeral=item.related_chord.roman_numeral,
         )
 
+    nct_candidate = None
+    if item.non_chord_tone_candidate is not None:
+        nct_candidate = NonChordToneCandidate(
+            kind=item.non_chord_tone_candidate.kind,
+            confidence=item.non_chord_tone_candidate.confidence,
+            reason=item.non_chord_tone_candidate.reason,
+            limitations=item.non_chord_tone_candidate.limitations,
+        )
+
     return AnalyzedNoteEvent(
         part_id=item.part_id,
         voice=item.voice,
@@ -260,6 +273,7 @@ def _to_analyzed_note_response(item: AnalyzedNote) -> AnalyzedNoteEvent:
         role=item.role,
         related_chord=related_chord,
         possible_non_chord_tone_type=item.possible_non_chord_tone_type,
+        non_chord_tone_candidate=nct_candidate,
         evidence=NoteAnalysisEvidence(
             chord_pitch_classes=item.evidence.chord_pitch_classes,
             note_pitch_class=item.evidence.note_pitch_class,

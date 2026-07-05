@@ -6,5 +6,6 @@ frontend/node_modules/
 frontend/.next/
 frontend/out/
 frontend/dist/
+frontend/tsconfig.tsbuildinfo
 frontend/.env.local
 .DS_Store

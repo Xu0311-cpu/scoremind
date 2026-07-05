@@ -7,7 +7,7 @@ from app.api.v1.routes_explanation import router as explanation_router
 
 app = FastAPI(
     title="AI Music Score Understanding API",
-    version="3.4.1",
+    version="3.5",
     description="MVP MusicXML deterministic analysis and template explanation API.",
 )
 
