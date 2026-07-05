@@ -27,7 +27,7 @@ NonChordToneCandidateKind = Literal[
     "unknown_non_chord_tone_candidate",
     "not_applicable",
 ]
-NonChordToneCandidateConfidence = Literal["low", "medium"]
+NonChordToneCandidateConfidence = Literal["low"]
 NoteContextSource = Literal["same_offset", "carried_previous_chord", "none"]
 
 

@@ -773,7 +773,7 @@ def test_multiple_detected_chords_warning() -> None:
 def test_nct_chord_tone_returns_not_applicable() -> None:
     measure = ParsedMeasure(
         measure_number=1,
-        notes=[ParsedNote(None, None, 1, 1.0, 0.0, 1.0, "C4")],
+        notes=[ParsedNote("P1", "1", 1, 1.0, 0.0, 1.0, "C4")],
     )
     analyzed = analyze_measure_notes(measure, [_c_major_context()])
 
@@ -786,7 +786,7 @@ def test_nct_chord_tone_returns_not_applicable() -> None:
 def test_nct_non_chord_without_context_returns_unknown() -> None:
     measure = ParsedMeasure(
         measure_number=1,
-        notes=[ParsedNote(None, None, 1, 1.0, 0.0, 1.0, "E4")],
+        notes=[ParsedNote("P1", "1", 1, 1.0, 0.0, 1.0, "E4")],
     )
     analyzed = analyze_measure_notes(measure, [])
 
@@ -796,21 +796,7 @@ def test_nct_non_chord_without_context_returns_unknown() -> None:
     assert analyzed[0].non_chord_tone_candidate.confidence == "low"
 
 
-def test_nct_non_chord_tone_without_adjacent_notes_returns_unknown() -> None:
-    measure = ParsedMeasure(
-        measure_number=1,
-        notes=[ParsedNote(None, None, 1, 1.0, 0.0, 1.0, "D4")],
-    )
-    analyzed = analyze_measure_notes(measure, [_c_major_context()])
-
-    assert analyzed[0].role == "non_chord_tone"
-    nct = analyzed[0].non_chord_tone_candidate
-    assert nct is not None
-    assert nct.kind == "unknown_non_chord_tone_candidate"
-    assert "缺少相邻音符上下文" in nct.reason
-
-
-def test_nct_passing_tone_candidate_stepwise_ascending() -> None:
+def test_nct_missing_voice_returns_unknown() -> None:
     measure = ParsedMeasure(
         measure_number=1,
         notes=[
@@ -821,7 +807,39 @@ def test_nct_passing_tone_candidate_stepwise_ascending() -> None:
     )
     analyzed = analyze_measure_notes(measure, [_c_major_context()])
 
-    # C4 and E4 are chord tones (in C major), D4 is non-chord between them
+    for note in analyzed:
+        if note.role == "non_chord_tone":
+            nct = note.non_chord_tone_candidate
+            assert nct is not None
+            assert nct.kind == "unknown_non_chord_tone_candidate"
+            assert "声部信息" in nct.reason
+
+
+def test_nct_single_note_without_adjacent_notes_in_voice_returns_unknown() -> None:
+    measure = ParsedMeasure(
+        measure_number=1,
+        notes=[ParsedNote("P1", "1", 1, 1.0, 0.0, 1.0, "D4")],
+    )
+    analyzed = analyze_measure_notes(measure, [_c_major_context()])
+
+    assert analyzed[0].role == "non_chord_tone"
+    nct = analyzed[0].non_chord_tone_candidate
+    assert nct is not None
+    assert nct.kind == "unknown_non_chord_tone_candidate"
+    assert "前后相邻音符" in nct.reason
+
+
+def test_nct_passing_tone_candidate_stepwise_ascending() -> None:
+    measure = ParsedMeasure(
+        measure_number=1,
+        notes=[
+            ParsedNote("P1", "1", 1, 1.0, 0.0, 1.0, "C4"),
+            ParsedNote("P1", "1", 1, 1.0, 0.5, 1.0, "D4"),
+            ParsedNote("P1", "1", 1, 1.0, 1.0, 1.0, "E4"),
+        ],
+    )
+    analyzed = analyze_measure_notes(measure, [_c_major_context()])
+
     middle = analyzed[1]
     assert middle.pitch == "D4"
     assert middle.role == "non_chord_tone"
@@ -837,9 +855,9 @@ def test_nct_passing_tone_candidate_stepwise_descending() -> None:
     measure = ParsedMeasure(
         measure_number=1,
         notes=[
-            ParsedNote(None, None, 1, 1.0, 0.0, 1.0, "G4"),
-            ParsedNote(None, None, 1, 1.0, 0.5, 1.0, "F4"),
-            ParsedNote(None, None, 1, 1.0, 1.0, 1.0, "E4"),
+            ParsedNote("P1", "1", 1, 1.0, 0.0, 1.0, "G4"),
+            ParsedNote("P1", "1", 1, 1.0, 0.5, 1.0, "F4"),
+            ParsedNote("P1", "1", 1, 1.0, 1.0, 1.0, "E4"),
         ],
     )
     analyzed = analyze_measure_notes(measure, [_c_major_context()])
@@ -857,9 +875,9 @@ def test_nct_neighbor_tone_candidate() -> None:
     measure = ParsedMeasure(
         measure_number=1,
         notes=[
-            ParsedNote(None, None, 1, 1.0, 0.0, 1.0, "C4"),
-            ParsedNote(None, None, 1, 1.0, 0.5, 1.0, "D4"),
-            ParsedNote(None, None, 1, 1.0, 1.0, 1.0, "C4"),
+            ParsedNote("P1", "1", 1, 1.0, 0.0, 1.0, "C4"),
+            ParsedNote("P1", "1", 1, 1.0, 0.5, 1.0, "D4"),
+            ParsedNote("P1", "1", 1, 1.0, 1.0, 1.0, "C4"),
         ],
     )
     analyzed = analyze_measure_notes(measure, [_c_major_context()])
@@ -878,9 +896,9 @@ def test_nct_non_stepwise_motion_returns_unknown() -> None:
     measure = ParsedMeasure(
         measure_number=1,
         notes=[
-            ParsedNote(None, None, 1, 1.0, 0.0, 1.0, "C4"),
-            ParsedNote(None, None, 1, 1.0, 0.5, 1.0, "F#4"),
-            ParsedNote(None, None, 1, 1.0, 1.0, 1.0, "G4"),
+            ParsedNote("P1", "1", 1, 1.0, 0.0, 1.0, "C4"),
+            ParsedNote("P1", "1", 1, 1.0, 0.5, 1.0, "F#4"),
+            ParsedNote("P1", "1", 1, 1.0, 1.0, 1.0, "G4"),
         ],
     )
     analyzed = analyze_measure_notes(measure, [_c_major_context()])
@@ -891,6 +909,118 @@ def test_nct_non_stepwise_motion_returns_unknown() -> None:
     nct = middle.non_chord_tone_candidate
     assert nct is not None
     assert nct.kind == "unknown_non_chord_tone_candidate"
+
+
+# ── MVP 3.5.1 Hardening Tests ──────────────────────────────────────────
+
+
+def test_nct_same_offset_adjacency_returns_unknown() -> None:
+    """Same-offset notes are simultaneous, not melodic adjacency."""
+    measure = ParsedMeasure(
+        measure_number=1,
+        notes=[
+            ParsedNote("P1", "1", 1, 1.0, 0.0, 1.0, "C4"),
+            ParsedNote("P1", "1", 1, 1.0, 0.0, 1.0, "D4"),
+            ParsedNote("P1", "1", 1, 1.0, 1.0, 1.0, "E4"),
+        ],
+    )
+    analyzed = analyze_measure_notes(measure, [_c_major_context()])
+
+    # C4 and D4 share same offset (0.0) — D4 should not get passing/neighbor
+    for note in analyzed:
+        if note.pitch == "D4":
+            nct = note.non_chord_tone_candidate
+            assert nct is not None
+            assert nct.kind == "unknown_non_chord_tone_candidate"
+
+
+def test_nct_simultaneity_in_voice_returns_unknown() -> None:
+    """Multiple notes at same offset in same voice = chordal, not monophonic."""
+    measure = ParsedMeasure(
+        measure_number=1,
+        notes=[
+            ParsedNote("P1", "1", 1, 1.0, 0.0, 1.0, "C4"),
+            ParsedNote("P1", "1", 1, 1.0, 0.0, 1.0, "E4"),
+            ParsedNote("P1", "1", 1, 1.0, 0.5, 1.0, "D4"),
+            ParsedNote("P1", "1", 1, 1.0, 1.0, 1.0, "C4"),
+        ],
+    )
+    analyzed = analyze_measure_notes(measure, [_c_major_context()])
+
+    # C4 and E4 are both at offset 0.0 in same voice → simultaneity
+    # D4 should be unknown because prev anchors have simultaneity
+    d_note = [n for n in analyzed if n.pitch == "D4"][0]
+    nct = d_note.non_chord_tone_candidate
+    assert nct is not None
+    assert nct.kind == "unknown_non_chord_tone_candidate"
+    assert "同拍点多音" in nct.reason
+
+
+def test_nct_mixed_voices_do_not_cross_detect() -> None:
+    """Notes in different voices should not be compared."""
+    measure = ParsedMeasure(
+        measure_number=1,
+        notes=[
+            ParsedNote("P1", "1", 1, 1.0, 0.0, 1.0, "C4"),
+            ParsedNote("P1", "1", 1, 1.0, 1.0, 1.0, "E4"),
+            ParsedNote("P1", "2", 1, 1.0, 0.5, 1.0, "D4"),
+        ],
+    )
+    analyzed = analyze_measure_notes(measure, [_c_major_context()])
+
+    # Voice 2 has only D4 alone — no adjacent notes in same voice
+    for note in analyzed:
+        if note.voice == "2":
+            nct = note.non_chord_tone_candidate
+            assert nct is not None
+            assert nct.kind == "unknown_non_chord_tone_candidate"
+            assert "前后相邻音符" in nct.reason
+
+
+def test_nct_non_chord_tone_anchors_return_unknown() -> None:
+    """Require previous and next notes to be chord tones as safe anchors."""
+    measure = ParsedMeasure(
+        measure_number=1,
+        notes=[
+            ParsedNote("P1", "1", 1, 1.0, 0.0, 1.0, "D4"),
+            ParsedNote("P1", "1", 1, 1.0, 0.5, 1.0, "E4"),
+            ParsedNote("P1", "1", 1, 1.0, 1.0, 1.0, "F4"),
+        ],
+    )
+    analyzed = analyze_measure_notes(measure, [_c_major_context()])
+
+    # D4 and F4 are non-chord tones in C major, E4 is chord tone
+    # middle (E4) role is chord_tone → not_applicable (already covered)
+    # Check that D4 (first note) and F4 (last note) get unknown
+    for note in analyzed:
+        if note.role == "non_chord_tone":
+            nct = note.non_chord_tone_candidate
+            assert nct is not None
+            if note.pitch == "D4":
+                assert nct.kind == "unknown_non_chord_tone_candidate"
+                assert "前后相邻音符" in nct.reason
+            elif note.pitch == "F4":
+                assert nct.kind == "unknown_non_chord_tone_candidate"
+
+
+def test_nct_octave_displaced_not_neighbor() -> None:
+    """C4 → D4 → C5 should NOT be neighbor: different octave."""
+    measure = ParsedMeasure(
+        measure_number=1,
+        notes=[
+            ParsedNote("P1", "1", 1, 1.0, 0.0, 1.0, "C4"),
+            ParsedNote("P1", "1", 1, 1.0, 0.5, 1.0, "D4"),
+            ParsedNote("P1", "1", 1, 1.0, 1.0, 1.0, "C5"),
+        ],
+    )
+    analyzed = analyze_measure_notes(measure, [_c_major_context()])
+
+    middle = analyzed[1]
+    assert middle.pitch == "D4"
+    nct = middle.non_chord_tone_candidate
+    assert nct is not None
+    # prev_midi(C4)=60, next_midi(C5)=72 — not equal → not neighbor
+    assert nct.kind != "neighbor_tone_candidate"
 
 
 def test_nct_api_response_includes_candidate_field() -> None:
@@ -919,7 +1049,7 @@ def test_nct_api_response_includes_candidate_field() -> None:
                 "unknown_non_chord_tone_candidate",
                 "not_applicable",
             )
-            assert nct["confidence"] in ("low", "medium")
+            assert nct["confidence"] == "low"
 
 
 def test_nct_existing_analysis_payloads_still_work() -> None:
@@ -962,4 +1092,31 @@ def test_nct_never_high_confidence() -> None:
     for measure in payload["measures"]:
         for note in measure["analyzed_notes"]:
             nct = note["non_chord_tone_candidate"]
-            assert nct["confidence"] != "high"
+            assert nct["confidence"] == "low"
+
+
+def test_explain_accepts_analysis_without_nct_candidate_field() -> None:
+    """Explanation endpoint must accept old analysis JSON without non_chord_tone_candidate."""
+    client = TestClient(app)
+
+    with (FIXTURE_DIR / "c_major_progression.musicxml").open("rb") as handle:
+        analysis_response = client.post(
+            "/api/v1/analyze/musicxml",
+            files={"file": ("c_major_progression.musicxml", handle, "application/vnd.recordare.musicxml+xml")},
+        )
+    assert analysis_response.status_code == 200
+
+    analysis = analysis_response.json()
+    for measure in analysis["measures"]:
+        for note in measure["analyzed_notes"]:
+            del note["non_chord_tone_candidate"]
+
+    explanation_response = client.post(
+        "/api/v1/explain/analysis",
+        json={"analysis": analysis, "language": "zh-CN", "level": "student"},
+    )
+
+    assert explanation_response.status_code == 200
+    payload = explanation_response.json()
+    assert "explanation_version" in payload
+    assert payload["explanation_version"] == "3.5"

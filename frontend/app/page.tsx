@@ -23,7 +23,7 @@ type DetectedChord = {
 
 type NonChordToneCandidate = {
   kind: "passing_tone_candidate" | "neighbor_tone_candidate" | "unknown_non_chord_tone_candidate" | "not_applicable";
-  confidence: "low" | "medium";
+  confidence: "low";
   reason: string;
   limitations: string[];
 };

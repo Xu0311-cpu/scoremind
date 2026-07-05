@@ -238,10 +238,9 @@ def _to_midi(pitch_name: str) -> int | None:
 
 
 def _compute_nct_candidates(notes: list[AnalyzedNote]) -> list[AnalyzedNote]:
-    sorted_notes = sorted(notes, key=lambda n: (n.offset, n.pitch))
     result: list[AnalyzedNote] = []
-    for i, note in enumerate(sorted_notes):
-        candidate = _compute_single_nct_candidate(note, sorted_notes, i)
+    for note in notes:
+        candidate = _compute_single_nct_candidate(note, notes)
         result.append(AnalyzedNote(
             part_id=note.part_id,
             voice=note.voice,
@@ -260,10 +259,27 @@ def _compute_nct_candidates(notes: list[AnalyzedNote]) -> list[AnalyzedNote]:
     return result
 
 
+def _voice_stream(note: AnalyzedNote, all_notes: list[AnalyzedNote]) -> list[AnalyzedNote]:
+    return sorted(
+        [
+            n
+            for n in all_notes
+            if n.part_id == note.part_id
+            and n.voice == note.voice
+            and n.measure_number == note.measure_number
+        ],
+        key=lambda n: (n.offset, n.pitch),
+    )
+
+
+def _has_simultaneity(note: AnalyzedNote, voice_notes: list[AnalyzedNote]) -> bool:
+    count = sum(1 for n in voice_notes if _offset_key(n.offset) == _offset_key(note.offset))
+    return count > 1
+
+
 def _compute_single_nct_candidate(
     note: AnalyzedNote,
     all_notes: list[AnalyzedNote],
-    index: int,
 ) -> NonChordToneCandidate:
     if note.role == "chord_tone":
         return NonChordToneCandidate(
@@ -281,23 +297,59 @@ def _compute_single_nct_candidate(
             limitations=["缺少和声参考和弦，无法判断非和弦音类型。"],
         )
 
-    prev_note = all_notes[index - 1] if index > 0 else None
-    next_note = all_notes[index + 1] if index < len(all_notes) - 1 else None
-
-    if prev_note is None or next_note is None:
+    if note.part_id is None or note.voice is None:
         return NonChordToneCandidate(
             kind="unknown_non_chord_tone_candidate",
             confidence="low",
-            reason="缺少相邻音符上下文，无法安全判断非和弦音候选类型。",
-            limitations=["非和弦音候选类型判断需要同一小节内前后相邻音符。"],
+            reason="缺少声部信息，无法安全识别单旋律线条。",
+            limitations=["非和弦音候选类型判断需要明确的声部信息以区分旋律线条。"],
         )
 
-    if prev_note.measure_number != note.measure_number or next_note.measure_number != note.measure_number:
+    voice_notes = _voice_stream(note, all_notes)
+
+    try:
+        idx = voice_notes.index(note)
+    except ValueError:
         return NonChordToneCandidate(
             kind="unknown_non_chord_tone_candidate",
             confidence="low",
-            reason="相邻音符不在同一小节，无法安全判断非和弦音候选类型。",
-            limitations=["当前非和弦音候选分析仅限同一小节内的相邻音符。"],
+            reason="无法在声部流中定位当前音符。",
+            limitations=["声部流定位失败，无法安全判断非和弦音候选类型。"],
+        )
+
+    if idx == 0 or idx == len(voice_notes) - 1:
+        return NonChordToneCandidate(
+            kind="unknown_non_chord_tone_candidate",
+            confidence="low",
+            reason="缺少同一旋律线条内的前后相邻音符。",
+            limitations=["非和弦音候选类型判断需要同一旋律线条内的前后相邻音符。"],
+        )
+
+    prev_note = voice_notes[idx - 1]
+    next_note = voice_notes[idx + 1]
+
+    if _offset_key(prev_note.offset) == _offset_key(note.offset) or _offset_key(note.offset) == _offset_key(next_note.offset):
+        return NonChordToneCandidate(
+            kind="unknown_non_chord_tone_candidate",
+            confidence="low",
+            reason="相邻音符位于同一拍点，不构成旋律邻接关系。",
+            limitations=["同拍点的音符不构成旋律前后的邻接关系。"],
+        )
+
+    if _has_simultaneity(prev_note, voice_notes) or _has_simultaneity(note, voice_notes) or _has_simultaneity(next_note, voice_notes):
+        return NonChordToneCandidate(
+            kind="unknown_non_chord_tone_candidate",
+            confidence="low",
+            reason="当前声部存在同拍点多音，无法确保为单旋律线条。",
+            limitations=["同拍点多音可能来自和弦或复调织体，不能作为安全的旋律邻接。"],
+        )
+
+    if prev_note.role != "chord_tone" or next_note.role != "chord_tone":
+        return NonChordToneCandidate(
+            kind="unknown_non_chord_tone_candidate",
+            confidence="low",
+            reason="前后相邻音不是和弦音，无法作为安全锚点进行非和弦音候选判断。",
+            limitations=["非和弦音候选判断需要前后相邻音为稳定和弦音作为参考锚点。"],
         )
 
     curr_midi = _to_midi(note.pitch)
@@ -327,21 +379,19 @@ def _compute_single_nct_candidate(
                 confidence="low",
                 reason=f"该音（{note.pitch}）在相邻音 {prev_note.pitch} 和 {next_note.pitch} 之间形成可能的级进{direction}经过运动。",
                 limitations=[
-                    "仅基于同一小节内相邻音符的简单音高关系判断，未考虑节奏、声部、和声节奏等因素。",
+                    "仅基于同一旋律线条内相邻音符的简单音高关系判断，未考虑节奏、和声节奏等因素。",
                     "这是学习提示，不是最终乐理结论。",
                 ],
             )
 
-    # Neighbor tone candidate: prev and next same pitch, current steps away and back
-    prev_pc = _pitch_class_number(prev_note.pitch)
-    next_pc = _pitch_class_number(next_note.pitch)
-    if prev_pc is not None and next_pc is not None and prev_pc == next_pc and _is_step(prev_step):
+    # Neighbor tone candidate: exact MIDI pitch equality (not just pitch class)
+    if prev_midi == next_midi and _is_step(prev_step):
         return NonChordToneCandidate(
             kind="neighbor_tone_candidate",
             confidence="low",
             reason=f"该音（{note.pitch}）从 {prev_note.pitch} 离开后返回同一音高，可能是辅助音运动。",
             limitations=[
-                "仅基于同一小节内相邻音符的简单音高关系判断，未考虑节奏、声部、和声节奏等因素。",
+                "仅基于同一旋律线条内相邻音符的简单音高关系判断，未考虑节奏、和声节奏等因素。",
                 "这是学习提示，不是最终乐理结论。",
             ],
         )

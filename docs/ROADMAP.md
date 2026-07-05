@@ -1,6 +1,6 @@
 # Roadmap
 
-This roadmap describes future work. Items listed here are not current MVP 3.3 capabilities unless explicitly implemented elsewhere.
+This roadmap describes future work. Items listed here are not current MVP 3.5 capabilities unless explicitly implemented elsewhere.
 
 ## Current / Completed
 
