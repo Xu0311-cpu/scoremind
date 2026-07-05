@@ -21,6 +21,13 @@ type DetectedChord = {
   };
 };
 
+type NonChordToneCandidate = {
+  kind: "passing_tone_candidate" | "neighbor_tone_candidate" | "unknown_non_chord_tone_candidate" | "not_applicable";
+  confidence: "low" | "medium";
+  reason: string;
+  limitations: string[];
+};
+
 type AnalyzedNote = {
   measure_number: number;
   beat: number | null;
@@ -35,6 +42,7 @@ type AnalyzedNote = {
     roman_numeral: string | null;
   } | null;
   possible_non_chord_tone_type: string | null;
+  non_chord_tone_candidate?: NonChordToneCandidate | null;
   evidence: {
     chord_pitch_classes: string[];
     note_pitch_class: string;
@@ -99,6 +107,9 @@ type NoteSummary = {
   sameOffset: number;
   carriedContext: number;
   noContext: number;
+  passingCandidate: number;
+  neighborCandidate: number;
+  unknownNctCandidate: number;
 };
 
 type AnalysisView = "student" | "technical";
@@ -202,7 +213,7 @@ const INPUT_SOURCE_OPTIONS: InputSourceOption[] = [
 
 const LEARNING_HINTS = [
   "阅读顺序建议：先看全局调性，再看每小节的和弦级数和功能，最后看音符是否属于当前和声。",
-  "非和弦音候选只表示该音不属于当前和弦，不等于系统已经判断它是经过音或辅助音。",
+  "非和弦音候选提示（如可能的经过音、可能的辅助音）只是基于简单相邻音高的学习提示，不是最终乐理结论。",
   "沿用前和弦（carried context）比同拍点和声（same offset）的可信度更弱，只能作为保守参考。",
 ];
 
@@ -550,7 +561,7 @@ export default function Home() {
       <section className="workspace">
         <header className="page-header">
           <div>
-            <p className="eyebrow">MVP 3.4.1</p>
+            <p className="eyebrow">MVP 3.5</p>
             <h1>ScoreMind</h1>
             <p className="product-subtitle">AI Music Score Understanding</p>
           </div>
@@ -630,7 +641,7 @@ export default function Home() {
               ) : (
                 <div className="unsupported-source-note">
                   <p>
-                    This source is guidance-only in MVP 3.4.1. The runtime upload control still accepts only
+                    This source is guidance-only in MVP 3.5. The runtime upload control still accepts only
                     {" "}.musicxml and .xml files after you export or convert externally.
                   </p>
                 </div>
@@ -652,7 +663,7 @@ export default function Home() {
             <h2>About this demo</h2>
             <ul>
               <li>This is a deterministic MusicXML score understanding demo for music students.</li>
-              <li>It helps students read chord, key, Roman numeral, harmonic function, and note-level harmony relationships.</li>
+              <li>It helps students read chord, key, Roman numeral, harmonic function, note-level harmony relationships, and conservative non-chord tone candidate hints.</li>
               <li>It does not support PDF/image/OMR or real LLM reasoning yet.</li>
             </ul>
           </div>
@@ -665,6 +676,7 @@ export default function Home() {
               <li>Does not use real LLM/OpenAI.</li>
               <li>Analysis is deterministic and backend-generated.</li>
               <li>Includes conservative note-level chord-tone labeling with carried context.</li>
+              <li>Adds conservative non-chord tone candidate hints (passing/neighbor) for student learning only.</li>
               <li>Note filters and summaries are frontend-only usability tools.</li>
               <li>Student View explains the same deterministic result in plain Chinese.</li>
               <li>Process Explanation turns existing analysis output into a step-by-step reading path.</li>
@@ -887,6 +899,7 @@ export default function Home() {
                       <li>Global-key Roman numeral analysis.</li>
                       <li>Same-offset chord-tone labeling.</li>
                       <li>Conservative carried previous chord context.</li>
+                      <li>Conservative non-chord tone candidate hints (learning only).</li>
                     </ul>
                   </div>
                   <div>
@@ -894,7 +907,7 @@ export default function Home() {
                     <ul>
                       <li>Full classical non-chord tone classification.</li>
                       <li>Full sustained harmony inference.</li>
-                      <li>Passing/neighbor tone classification.</li>
+                      <li>Definitive passing/neighbor tone classification.</li>
                       <li>Melody or voice-leading analysis.</li>
                       <li>Local modulation.</li>
                       <li>Jazz or modern harmony.</li>
@@ -1079,6 +1092,18 @@ export default function Home() {
                                   <dt>Possible Type</dt>
                                   <dd>{note.possible_non_chord_tone_type ?? "N/A"}</dd>
                                 </div>
+                                {note.non_chord_tone_candidate && note.non_chord_tone_candidate.kind !== "not_applicable" && (
+                                  <div className="note-nct-candidate">
+                                    <dt>NCT Candidate</dt>
+                                    <dd>
+                                      <span className={`nct-kind nct-${note.non_chord_tone_candidate.kind}`}>
+                                        {formatNctKind(note.non_chord_tone_candidate.kind)}
+                                      </span>
+                                      <span className="nct-confidence">Confidence: {note.non_chord_tone_candidate.confidence}</span>
+                                      <span className="nct-reason">{note.non_chord_tone_candidate.reason}</span>
+                                    </dd>
+                                  </div>
+                                )}
                                 <div className="note-reason">
                                   <dt>Reason</dt>
                                   <dd>
@@ -1286,6 +1311,9 @@ function emptyNoteSummary(): NoteSummary {
     sameOffset: 0,
     carriedContext: 0,
     noContext: 0,
+    passingCandidate: 0,
+    neighborCandidate: 0,
+    unknownNctCandidate: 0,
   };
 }
 
@@ -1307,6 +1335,16 @@ function summarizeNotes(notes: AnalyzedNote[]): NoteSummary {
       summary.carriedContext += 1;
     } else {
       summary.noContext += 1;
+    }
+
+    if (note.non_chord_tone_candidate) {
+      if (note.non_chord_tone_candidate.kind === "passing_tone_candidate") {
+        summary.passingCandidate += 1;
+      } else if (note.non_chord_tone_candidate.kind === "neighbor_tone_candidate") {
+        summary.neighborCandidate += 1;
+      } else if (note.non_chord_tone_candidate.kind === "unknown_non_chord_tone_candidate") {
+        summary.unknownNctCandidate += 1;
+      }
     }
   }
   return summary;
@@ -1336,7 +1374,7 @@ function buildStudentSummary(analysis: MusicXMLAnalysisResponse): StudentSummary
   const limitations = [
     "这里展示的都是后端已有的分析结果，只是换成了更容易理解的中文，不会新增任何音乐理论结论。",
     "非和弦音候选只表示该音不属于当前和弦上下文，不等于已经判断它是经过音或辅助音。",
-    "系统还不能识别 passing tone、neighbor tone、suspension、appoggiatura 等古典非和弦音类型。",
+    "系统提供保守的非和弦音候选提示（如可能的经过音、可能的辅助音），但这不是完整的古典非和弦音分类，也不能识别 suspension、appoggiatura 等更复杂类型。",
     "系统还不能做完整旋律分析、声部进行分析、局部转调或持续和声推断。",
   ];
 
@@ -1397,7 +1435,7 @@ function buildProcessSteps(
       lines: [
         `当前共分析 ${noteSummary.total} 个音。具体分类可在 Technical Evidence 中查看。`,
         "chord tone（和弦音）：该音属于当前和弦。",
-        "non-chord tone candidate（非和弦音候选）：该音不属于当前和弦，但还没做完整分类。",
+        "non-chord tone candidate（非和弦音候选）：该音不属于当前和弦，系统会基于相邻音符给出保守的类型候选提示（如可能的经过音、可能的辅助音）。",
         "unknown：当前没有可用和声上下文，暂不判断。",
       ],
     },
@@ -1488,7 +1526,18 @@ function buildMeasureNoteRelationshipSentence(summary: NoteSummary) {
   if (summary.unknown > 0) {
     parts.push(`${summary.chordTone + summary.nonChordTone > 0 ? "" : "有"}${summary.unknown} 个缺少和声上下文`);
   }
-  return `本小节有 ${parts.join("，")}。`;
+  const nctParts: string[] = [];
+  if (summary.passingCandidate > 0) {
+    nctParts.push(`${summary.passingCandidate} 个可能是经过音`);
+  }
+  if (summary.neighborCandidate > 0) {
+    nctParts.push(`${summary.neighborCandidate} 个可能是辅助音`);
+  }
+  const sentence = `本小节有 ${parts.join("，")}。`;
+  if (nctParts.length > 0) {
+    return `${sentence} 其中${nctParts.join("，")}（学习提示，不是最终结论）。`;
+  }
+  return sentence;
 }
 
 function formatHarmonicFunctionForStudent(harmonicFunction: string) {
@@ -1553,6 +1602,19 @@ function formatContextSource(contextSource: AnalyzedNote["evidence"]["context_so
     return "Carried previous chord";
   }
   return "No harmony context";
+}
+
+function formatNctKind(kind: NonChordToneCandidate["kind"]) {
+  if (kind === "passing_tone_candidate") {
+    return "可能的经过音候选";
+  }
+  if (kind === "neighbor_tone_candidate") {
+    return "可能的辅助音候选";
+  }
+  if (kind === "unknown_non_chord_tone_candidate") {
+    return "非和弦音候选（类型暂不确定）";
+  }
+  return "不适用";
 }
 
 function formatContextReliability(contextSource: AnalyzedNote["evidence"]["context_source"]) {
@@ -1673,7 +1735,7 @@ function generateMarkdownReport(
 }
 
 function formatNoteSummaryForMarkdown(summary: NoteSummary) {
-  return [
+  const lines = [
     `- Total analyzed notes: ${summary.total}`,
     `- Chord tones: ${summary.chordTone}`,
     `- Non-chord tone candidates: ${summary.nonChordTone}`,
@@ -1682,6 +1744,19 @@ function formatNoteSummaryForMarkdown(summary: NoteSummary) {
     `- Carried-context notes: ${summary.carriedContext}`,
     `- No-context notes: ${summary.noContext}`,
   ];
+  if (summary.passingCandidate > 0 || summary.neighborCandidate > 0 || summary.unknownNctCandidate > 0) {
+    lines.push("- Non-chord tone candidate details (learning hints, not final conclusions):");
+    if (summary.passingCandidate > 0) {
+      lines.push(`  - Possible passing tone candidates: ${summary.passingCandidate}`);
+    }
+    if (summary.neighborCandidate > 0) {
+      lines.push(`  - Possible neighbor tone candidates: ${summary.neighborCandidate}`);
+    }
+    if (summary.unknownNctCandidate > 0) {
+      lines.push(`  - Non-chord tone candidates (type uncertain): ${summary.unknownNctCandidate}`);
+    }
+  }
+  return lines;
 }
 
 function formatStudentListForMarkdown(items: string[]) {

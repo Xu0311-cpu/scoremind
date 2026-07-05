@@ -6,10 +6,10 @@ from app.schemas.analysis import DetectedChord, MusicXMLAnalysisResponse
 from app.schemas.explanation import ExplanationResponse, ExplanationSection
 
 
-EXPLANATION_VERSION = "3.4.1"
+EXPLANATION_VERSION = "3.5"
 EXPLANATION_WARNINGS = [
     "This explanation is template-generated from deterministic analysis output.",
-    "No LLM is called in MVP 3.4.1.",
+    "No LLM is called in MVP 3.5.",
     "Future LLM providers must not infer new music-theory conclusions.",
 ]
 
@@ -98,14 +98,32 @@ def _note_text(analysis: MusicXMLAnalysisResponse) -> str:
         "carried_previous_chord": 0,
         "none": 0,
     }
+    nct_counts = {
+        "passing_tone_candidate": 0,
+        "neighbor_tone_candidate": 0,
+        "unknown_non_chord_tone_candidate": 0,
+        "not_applicable": 0,
+    }
     for measure in analysis.measures:
         for note in measure.analyzed_notes:
             counts[note.role] += 1
             context_counts[note.evidence.context_source] += 1
+            nct = note.non_chord_tone_candidate
+            if nct is not None:
+                nct_counts[nct.kind] += 1
 
     total = sum(counts.values())
     if total == 0:
         return "当前分析没有可用的音符级结果。"
+
+    nct_parts = []
+    if nct_counts["passing_tone_candidate"] > 0:
+        nct_parts.append(f"可能的经过音候选 {nct_counts['passing_tone_candidate']} 个")
+    if nct_counts["neighbor_tone_candidate"] > 0:
+        nct_parts.append(f"可能的辅助音候选 {nct_counts['neighbor_tone_candidate']} 个")
+    if nct_counts["unknown_non_chord_tone_candidate"] > 0:
+        nct_parts.append(f"暂不确定类型的非和弦音候选 {nct_counts['unknown_non_chord_tone_candidate']} 个")
+    nct_summary = "；".join(nct_parts) if nct_parts else "非和弦音候选类型暂未识别"
 
     return (
         "音符级分析先检查同一 measure offset 的已检测和声；"
@@ -116,8 +134,10 @@ def _note_text(analysis: MusicXMLAnalysisResponse) -> str:
         f"上下文来源：same_offset {context_counts['same_offset']} 个，"
         f"carried_previous_chord {context_counts['carried_previous_chord']} 个，"
         f"none {context_counts['none']} 个。"
+        f"非和弦音候选分类：{nct_summary}。"
         "non_chord_tone 只表示该音不属于所选和弦上下文，"
         "不是完整的古典非和弦音分类；carried context 也不是完整持续和声、乐句和声、旋律或声部进行分析。"
+        "非和弦音候选标签只是保守的学习提示，不是最终乐理结论。"
     )
 
 

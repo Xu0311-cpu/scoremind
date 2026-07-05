@@ -1,51 +1,63 @@
-# MVP 3.4.1 Release Notes
+# MVP 3.5 Release Notes
 
 ## Release Purpose
 
-MVP 3.4.1 hardens the measure-level harmonic context layer for backward compatibility and conservative wording. This is a compatibility and language fix, not a new analysis capability.
+MVP 3.5 adds conservative non-chord tone candidate hints for student learning. This is NOT full non-chord tone analysis — it is a candidate layer with cautious wording and low confidence.
 
 ## What Changed
 
-- `harmonic_context` is now optional in `MeasureAnalysis`. Old analysis JSON without `harmonic_context` is accepted by the explanation endpoint.
-- Field names changed from `primary_*` to `selected_*` to avoid overclaiming when multiple chords exist.
-- Context source now includes `not_available` for missing harmonic context.
-- Multiple detected chords in a measure now produce a warning: "Multiple detected chords exist in this measure; the selected context is a representative reference, not a full harmonic reduction."
-- Frontend safely handles missing `harmonic_context` with a conservative fallback.
-- Wording changed from "主要和声" to "选定和声参考" (selected harmony reference).
-- All version strings updated to 3.4.1.
+- Added `non_chord_tone_candidate` field to every analyzed note with kind, confidence, reason, and limitations.
+- Kinds: `not_applicable` (chord tones), `passing_tone_candidate`, `neighbor_tone_candidate`, `unknown_non_chord_tone_candidate`.
+- Passing/neighbor tone candidates are detected only from simple same-measure adjacent pitch motion (stepwise movement).
+- Non-chord tones without safe adjacent context are labeled `unknown_non_chord_tone_candidate`.
+- Confidence is always `low` in MVP 3.5 (never `high`).
+- All wording uses conservative language: "可能的经过音候选", "可能的辅助音候选", "学习提示，不是最终乐理结论".
+- Explanation endpoint includes NCT candidate counts in the note text section.
+- Frontend displays NCT candidate info in note cards, measure walkthroughs, and learning reports.
+- All version strings updated to 3.5.
 
 ## What Did Not Change
 
 - Chord detection algorithm is unchanged.
 - Key detection algorithm is unchanged.
 - Roman numeral algorithm is unchanged.
-- No new music-theory analysis added.
-- No PDF/image/OMR runtime.
-- No LLM/database/auth/Expert Review.
+- Note-level chord-tone classification is unchanged.
+- Harmonic context behavior is unchanged (MVP 3.4.1 backward compatibility).
+- No LLM calls, OMR, PDF/image, MIDI, audio, database, or authentication added.
 - No new dependencies.
+- `possible_non_chord_tone_type` field remains null (preserved for backward compatibility).
 
-## Harmonic Context Schema (Updated)
+## Non-Chord Tone Candidate Schema
 
 ```python
-class MeasureHarmonicContext(BaseModel):
-    selected_chord_label: str | None
-    selected_root: str | None
-    selected_quality: ChordQuality
-    selected_roman_numeral: str | None
-    selected_harmonic_function: HarmonicFunction
-    context_source: Literal["detected_chord", "no_detected_chord", "not_available"]
-    confidence: Literal["supported", "partial", "low"]
-    warnings: list[str]
+class NonChordToneCandidate(BaseModel):
+    kind: Literal["passing_tone_candidate", "neighbor_tone_candidate", "unknown_non_chord_tone_candidate", "not_applicable"]
+    confidence: Literal["low", "medium"]  # never "high" in MVP 3.5
+    reason: str
+    limitations: list[str]
 ```
+
+## Detection Rules
+
+- Chord tone → `kind="not_applicable"`, `confidence="low"`
+- Unknown role (no harmony context) → `kind="unknown_non_chord_tone_candidate"`, `confidence="low"`
+- Non-chord tone with stepwise same-direction adjacent motion → `kind="passing_tone_candidate"`, `confidence="low"`
+- Non-chord tone with same-pitch neighbors (away-and-back) → `kind="neighbor_tone_candidate"`, `confidence="low"`
+- All other non-chord tones → `kind="unknown_non_chord_tone_candidate"`, `confidence="low"`
+- Adjacent notes must be in the same measure; cross-measure context is not used.
 
 ## Validation Status
 
-- Backend: 35 tests passing (2 new for backward compatibility and multiple chords).
+- Backend: 43 tests passing (35 existing + 8 new for NCT).
 - Frontend: build passing.
+- All existing MVP 3.4.1 tests still pass.
 
 ## Known Limitations
 
-- Harmonic context is derived from detected chords only.
-- No cadence, modulation, or phrase-level analysis.
-- `partial` confidence when Roman numeral or harmonic function is not supported.
+- Non-chord tone candidate hints are conservative learning aids, not definitive music-theory conclusions.
+- Passing/neighbor tone detection uses only simple same-measure adjacent pitch motion.
+- No consideration of rhythm, voice, harmonic rhythm, or phrase structure.
+- Cross-measure melodic context is not used.
+- Confidence is never high; all labels should be treated as tentative.
+- Suspension, appoggiatura, échappée, and other complex non-chord tone types are not detected.
 - PDF/image/OMR input is future work.

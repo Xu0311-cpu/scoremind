@@ -278,7 +278,7 @@ def test_api_analyze_musicxml_returns_structured_json() -> None:
     payload = response.json()
     assert payload["file_name"] == "simple_chords.musicxml"
     assert payload["measure_count"] == 4
-    assert payload["analysis_version"] == "3.4.1"
+    assert payload["analysis_version"] == "3.5"
     assert payload["analysis_scope"] == [
         "musicxml_input_only",
         "same_offset_vertical_pitch_set",
@@ -286,14 +286,15 @@ def test_api_analyze_musicxml_returns_structured_json() -> None:
         "basic_triad_and_seventh_chords",
         "note_level_chord_tone_labeling",
         "carried_previous_chord_within_measure",
+        "conservative_non_chord_tone_candidate_labels",
     ]
     assert payload["key_analysis"]["tonic"] is not None
-    assert "MVP 3.4.1 detects chords only from simultaneous pitch sets at identical offsets." in payload["warnings"]
+    assert "MVP 3.5 detects chords only from simultaneous pitch sets at identical offsets." in payload["warnings"]
     assert "Roman numeral analysis is based only on the detected global key." in payload["warnings"]
     assert "No local modulation or secondary dominant analysis is performed." in payload["warnings"]
     assert "Harmonic function labels are basic MVP classifications." in payload["warnings"]
     assert (
-        "MVP 3.4.1 note-level analysis prefers same-offset harmony, then may use carried previous chord context within the same measure."
+        "MVP 3.5 note-level analysis prefers same-offset harmony, then may use carried previous chord context within the same measure."
     ) in payload["warnings"]
     assert "Carried harmony context is a conservative MVP approximation." in payload["warnings"]
     assert "It does not perform full sustained harmony, phrase-level harmony, or voice-leading analysis." in payload["warnings"]
@@ -469,13 +470,13 @@ def test_explain_analysis_returns_template_explanation_for_valid_analysis_json()
 
     assert explanation_response.status_code == 200
     payload = explanation_response.json()
-    assert payload["analysis_version"] == "3.4.1"
-    assert payload["explanation_version"] == "3.4.1"
+    assert payload["analysis_version"] == "3.5"
+    assert payload["explanation_version"] == "3.5"
     assert payload["language"] == "zh-CN"
     assert payload["level"] == "student"
     assert "C major" in payload["summary"]
     assert "This explanation is template-generated from deterministic analysis output." in payload["warnings"]
-    assert "No LLM is called in MVP 3.4.1." in payload["warnings"]
+    assert "No LLM is called in MVP 3.5." in payload["warnings"]
     assert "Future LLM providers must not infer new music-theory conclusions." in payload["warnings"]
     assert "Roman numeral analysis is based only on the detected global key." in payload["warnings"]
 
@@ -625,7 +626,7 @@ def test_api_invalid_file_extension_returns_400() -> None:
     )
 
     assert response.status_code == 400
-    assert response.json()["detail"] == "Only .musicxml and .xml files are supported in MVP 3.4.1."
+    assert response.json()["detail"] == "Only .musicxml and .xml files are supported in MVP 3.5."
 
 
 def test_harmonic_context_exists_on_measures() -> None:
@@ -744,7 +745,7 @@ def test_explain_accepts_analysis_without_harmonic_context() -> None:
     assert explanation_response.status_code == 200
     payload = explanation_response.json()
     assert "explanation_version" in payload
-    assert payload["explanation_version"] == "3.4.1"
+    assert payload["explanation_version"] == "3.5"
 
 
 def test_multiple_detected_chords_warning() -> None:
@@ -764,3 +765,201 @@ def test_multiple_detected_chords_warning() -> None:
         ctx = measure["harmonic_context"]
         multi_warnings = [w for w in ctx["warnings"] if "Multiple detected chords" in w]
         assert len(multi_warnings) == 0
+
+
+# ── MVP 3.5 Non-Chord Tone Candidate Tests ──────────────────────────────
+
+
+def test_nct_chord_tone_returns_not_applicable() -> None:
+    measure = ParsedMeasure(
+        measure_number=1,
+        notes=[ParsedNote(None, None, 1, 1.0, 0.0, 1.0, "C4")],
+    )
+    analyzed = analyze_measure_notes(measure, [_c_major_context()])
+
+    assert analyzed[0].role == "chord_tone"
+    assert analyzed[0].non_chord_tone_candidate is not None
+    assert analyzed[0].non_chord_tone_candidate.kind == "not_applicable"
+    assert analyzed[0].non_chord_tone_candidate.confidence == "low"
+
+
+def test_nct_non_chord_without_context_returns_unknown() -> None:
+    measure = ParsedMeasure(
+        measure_number=1,
+        notes=[ParsedNote(None, None, 1, 1.0, 0.0, 1.0, "E4")],
+    )
+    analyzed = analyze_measure_notes(measure, [])
+
+    assert analyzed[0].role == "unknown"
+    assert analyzed[0].non_chord_tone_candidate is not None
+    assert analyzed[0].non_chord_tone_candidate.kind == "unknown_non_chord_tone_candidate"
+    assert analyzed[0].non_chord_tone_candidate.confidence == "low"
+
+
+def test_nct_non_chord_tone_without_adjacent_notes_returns_unknown() -> None:
+    measure = ParsedMeasure(
+        measure_number=1,
+        notes=[ParsedNote(None, None, 1, 1.0, 0.0, 1.0, "D4")],
+    )
+    analyzed = analyze_measure_notes(measure, [_c_major_context()])
+
+    assert analyzed[0].role == "non_chord_tone"
+    nct = analyzed[0].non_chord_tone_candidate
+    assert nct is not None
+    assert nct.kind == "unknown_non_chord_tone_candidate"
+    assert "缺少相邻音符上下文" in nct.reason
+
+
+def test_nct_passing_tone_candidate_stepwise_ascending() -> None:
+    measure = ParsedMeasure(
+        measure_number=1,
+        notes=[
+            ParsedNote(None, None, 1, 1.0, 0.0, 1.0, "C4"),
+            ParsedNote(None, None, 1, 1.0, 0.5, 1.0, "D4"),
+            ParsedNote(None, None, 1, 1.0, 1.0, 1.0, "E4"),
+        ],
+    )
+    analyzed = analyze_measure_notes(measure, [_c_major_context()])
+
+    # C4 and E4 are chord tones (in C major), D4 is non-chord between them
+    middle = analyzed[1]
+    assert middle.pitch == "D4"
+    assert middle.role == "non_chord_tone"
+    nct = middle.non_chord_tone_candidate
+    assert nct is not None
+    assert nct.kind == "passing_tone_candidate"
+    assert nct.confidence == "low"
+    assert "级进" in nct.reason
+    assert "学习提示" in nct.limitations[1]
+
+
+def test_nct_passing_tone_candidate_stepwise_descending() -> None:
+    measure = ParsedMeasure(
+        measure_number=1,
+        notes=[
+            ParsedNote(None, None, 1, 1.0, 0.0, 1.0, "G4"),
+            ParsedNote(None, None, 1, 1.0, 0.5, 1.0, "F4"),
+            ParsedNote(None, None, 1, 1.0, 1.0, 1.0, "E4"),
+        ],
+    )
+    analyzed = analyze_measure_notes(measure, [_c_major_context()])
+
+    middle = analyzed[1]
+    assert middle.pitch == "F4"
+    assert middle.role == "non_chord_tone"
+    nct = middle.non_chord_tone_candidate
+    assert nct is not None
+    assert nct.kind == "passing_tone_candidate"
+    assert "下行" in nct.reason
+
+
+def test_nct_neighbor_tone_candidate() -> None:
+    measure = ParsedMeasure(
+        measure_number=1,
+        notes=[
+            ParsedNote(None, None, 1, 1.0, 0.0, 1.0, "C4"),
+            ParsedNote(None, None, 1, 1.0, 0.5, 1.0, "D4"),
+            ParsedNote(None, None, 1, 1.0, 1.0, 1.0, "C4"),
+        ],
+    )
+    analyzed = analyze_measure_notes(measure, [_c_major_context()])
+
+    middle = analyzed[1]
+    assert middle.pitch == "D4"
+    assert middle.role == "non_chord_tone"
+    nct = middle.non_chord_tone_candidate
+    assert nct is not None
+    assert nct.kind == "neighbor_tone_candidate"
+    assert nct.confidence == "low"
+    assert "辅助音" in nct.reason
+
+
+def test_nct_non_stepwise_motion_returns_unknown() -> None:
+    measure = ParsedMeasure(
+        measure_number=1,
+        notes=[
+            ParsedNote(None, None, 1, 1.0, 0.0, 1.0, "C4"),
+            ParsedNote(None, None, 1, 1.0, 0.5, 1.0, "F#4"),
+            ParsedNote(None, None, 1, 1.0, 1.0, 1.0, "G4"),
+        ],
+    )
+    analyzed = analyze_measure_notes(measure, [_c_major_context()])
+
+    middle = analyzed[1]
+    assert middle.pitch == "F#4"
+    assert middle.role == "non_chord_tone"
+    nct = middle.non_chord_tone_candidate
+    assert nct is not None
+    assert nct.kind == "unknown_non_chord_tone_candidate"
+
+
+def test_nct_api_response_includes_candidate_field() -> None:
+    client = TestClient(app)
+
+    with (FIXTURE_DIR / "c_major_progression.musicxml").open("rb") as handle:
+        response = client.post(
+            "/api/v1/analyze/musicxml",
+            files={"file": ("c_major_progression.musicxml", handle, "application/vnd.recordare.musicxml+xml")},
+        )
+
+    assert response.status_code == 200
+    payload = response.json()
+    for measure in payload["measures"]:
+        for note in measure["analyzed_notes"]:
+            assert "non_chord_tone_candidate" in note
+            nct = note["non_chord_tone_candidate"]
+            assert nct is not None
+            assert "kind" in nct
+            assert "confidence" in nct
+            assert "reason" in nct
+            assert "limitations" in nct
+            assert nct["kind"] in (
+                "passing_tone_candidate",
+                "neighbor_tone_candidate",
+                "unknown_non_chord_tone_candidate",
+                "not_applicable",
+            )
+            assert nct["confidence"] in ("low", "medium")
+
+
+def test_nct_existing_analysis_payloads_still_work() -> None:
+    """Chord tone notes from the carried_context fixture should return not_applicable."""
+    client = TestClient(app)
+
+    with (FIXTURE_DIR / "carried_context_notes.musicxml").open("rb") as handle:
+        response = client.post(
+            "/api/v1/analyze/musicxml",
+            files={"file": ("carried_context_notes.musicxml", handle, "application/vnd.recordare.musicxml+xml")},
+        )
+
+    assert response.status_code == 200
+    payload = response.json()
+    notes = payload["measures"][0]["analyzed_notes"]
+
+    # Chord tone notes should have not_applicable
+    c_tone = _note_by_pitch_and_offset(notes, "C4", 1.0)
+    assert c_tone["role"] == "chord_tone"
+    assert c_tone["non_chord_tone_candidate"]["kind"] == "not_applicable"
+
+    # Non-chord carried tone
+    carried = _note_by_pitch_and_offset(notes, "D4", 3.0)
+    assert carried["role"] == "non_chord_tone"
+    assert "non_chord_tone_candidate" in carried
+    assert carried["non_chord_tone_candidate"]["confidence"] == "low"
+
+
+def test_nct_never_high_confidence() -> None:
+    client = TestClient(app)
+
+    with (FIXTURE_DIR / "c_major_progression.musicxml").open("rb") as handle:
+        response = client.post(
+            "/api/v1/analyze/musicxml",
+            files={"file": ("c_major_progression.musicxml", handle, "application/vnd.recordare.musicxml+xml")},
+        )
+
+    assert response.status_code == 200
+    payload = response.json()
+    for measure in payload["measures"]:
+        for note in measure["analyzed_notes"]:
+            nct = note["non_chord_tone_candidate"]
+            assert nct["confidence"] != "high"
