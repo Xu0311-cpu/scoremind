@@ -6,6 +6,8 @@
 
 `timeline_staff_transpose.musicxml`、身份缺失变体、损坏 tie 和 `timeline_misaligned_parts.musicxml` 分别核验最低音比较不可用、原因码、结构失败不输出猜测片段。旧响应缺少 `written_pitch_observation` 仍可用于解释；空观察与未计算需区分。对新增引用断言可在当前响应内回溯，重复解析结果稳定。桌面及窄屏应检查按小节选择、精确分数、来源展开、静默与诊断，不将活动音集合展示为和弦。
 
+复审回归：上传 `timeline_ties.musicxml`，在技术证据中选第 2 小节。C4 必须同时显示持续事件 `[0,12)`、当前片段 `p1:m2:n1` 和完整链 `p1:m1:n1 → p1:m2:n1 → p1:m3:n1`；展开链后可核对三段来源。把中间声音标签替换成非标准 `<tie type="continue"/>` 的 API 测试应保留 `tie: ["continue"]` 供审计，同时给出诊断、`tie_safe=false` 并拒绝合并。此用例在 390px 窄屏不应横向溢出。
+
 本地命令：在 `backend/` 运行 `/opt/miniconda3/bin/python3 -m pytest`，在 `frontend/` 运行 `npm run build`。本次本地 Python 3.13 下 90 项测试通过，前端构建通过；1280px 与 390px 页面核对无横向溢出。`.github/workflows/ci.yml` 在 push / PR 时执行 Python 3.11 后端测试和 Node 20 前端构建；本地通过不代表远端 CI 已运行。
 
 ## MVP 3.6 时间轴验证

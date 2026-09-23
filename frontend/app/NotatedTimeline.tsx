@@ -126,13 +126,23 @@ export default function NotatedTimeline({ timeline }: { timeline?: NotatedTimeli
                                 )}
                                 {slice.written_pitch_observation.active_notes.length ? (
                                   <ul className="timeline-sources">
-                                    {slice.written_pitch_observation.active_notes.map((note) => (
-                                      <li key={note.event_id}>
-                                        <strong>{note.pitch}</strong> · {note.onset === "new" ? "此刻新起音" : "此前延续音"} · 事件 {note.event_id}
-                                        {note.source_note_ids.length === 0 && <span> · 来源缺失</span>}
-                                        {note.source_note_ids.map((sid) => <SourceDetails key={sid} source={sources.get(sid)} id={sid} />)}
-                                      </li>
-                                    ))}
+                                    {slice.written_pitch_observation.active_notes.map((note) => {
+                                      const event = events.get(note.event_id);
+                                      return (
+                                        <li key={note.event_id}>
+                                          <strong>{note.pitch}</strong> · {note.onset === "new" ? "此刻新起音" : "此前延续音"} · 事件 {note.event_id}
+                                          {event ? ` · 持续事件 [${event.start}, ${event.end})` : " · 持续事件来源缺失"}
+                                          <p className="timeline-current-source">当前时间片来源：{note.source_note_ids.join(", ") || "缺失"}</p>
+                                          {note.source_note_ids.map((sid) => <SourceDetails key={sid} source={sources.get(sid)} id={sid} />)}
+                                          {event && event.source_note_ids.length > 1 && (
+                                            <details className="timeline-chain">
+                                              <summary>完整延音链：{event.source_note_ids.join(" → ")}</summary>
+                                              {event.source_note_ids.map((sid) => <SourceDetails key={sid} source={sources.get(sid)} id={sid} />)}
+                                            </details>
+                                          )}
+                                        </li>
+                                      );
+                                    })}
                                   </ul>
                                 ) : <p>无已支持的持续音；如有诊断，不能据此断言原谱完全静默。</p>}
                               </>

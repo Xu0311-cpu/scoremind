@@ -238,7 +238,7 @@ def _normalize_part(part: ET.Element, pi: int, ids: list[str | None],
                 out.notes.append(Segment(
                     nid, mid, pi, pid, iid, instruments.get(iid), staff, voice, mi, number,
                     note_index, local_start, absolute + local_start, duration, pitch, octave,
-                    sorted(set(ties) & {"start", "stop"}),
+                    sorted(set(ties) & {"start", "continue", "stop"}),
                     sorted(set(visual) & {"start", "continue", "stop"}),
                     tie_safe and identity_safe and voice is not None and staff is not None
                     and iid is not None and not grace,

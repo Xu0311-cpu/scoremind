@@ -63,7 +63,7 @@ def build_notated_timeline(source: NormalizedTimeline) -> NotatedTimeline:
     for n in pitched:
         if n.tie and (not n.tie_safe or n.note_id in ambiguous):
             warn("unsafe_tie_identity", "Tie retained as separate fragment: identity or overlapping unison is ambiguous.", [n])
-        has_stop = "stop" in n.tie or "continue" in n.tie
+        has_stop = "stop" in n.tie
         if not has_stop:
             continue
         key = (_identity(n), n.pitch)
@@ -71,12 +71,12 @@ def build_notated_timeline(source: NormalizedTimeline) -> NotatedTimeline:
         incoming = starts[(key, n.start)]
         if (n.tie_safe and n.note_id not in ambiguous and len(candidates) == 1 and len(incoming) == 1
                 and candidates[0].tie_safe and candidates[0].note_id not in ambiguous
-                and ("start" in candidates[0].tie or "continue" in candidates[0].tie)):
+                and "start" in candidates[0].tie):
             previous[n.note_id] = candidates[0]
             following[candidates[0].note_id] = n
         else:
             prior_starts = [p for p in pitched if _identity(p) == _identity(n)
-                            and ("start" in p.tie or "continue" in p.tie) and p.start < n.start]
+                            and "start" in p.tie and p.start < n.start]
             code = "orphan_tie_stop"
             if len(candidates) > 1 or len(incoming) > 1 or n.note_id in ambiguous:
                 code = "ambiguous_tie_match"
@@ -86,7 +86,7 @@ def build_notated_timeline(source: NormalizedTimeline) -> NotatedTimeline:
                 code = "tie_pitch_mismatch"
             warn(code, "No unique continuous same-identity/same-spelling tie predecessor; duration not extended.", [n])
     for n in pitched:
-        if ("start" in n.tie or "continue" in n.tie) and n.note_id not in following:
+        if "start" in n.tie and n.note_id not in following:
             warn("unclosed_tie_start", "No safe matching continuation; event ends at its written duration.", [n])
 
     for n in sorted(pitched, key=lambda n: (n.start, n.part_index, n.measure_index, n.source_note_index)):

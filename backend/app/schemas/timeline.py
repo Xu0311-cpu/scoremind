@@ -40,7 +40,9 @@ class SourceNoteSegment(BaseModel):
     duration: ExactTime
     pitch: str
     octave: int
-    tie: list[Literal["start", "continue", "stop"]]
+    tie: list[Literal["start", "continue", "stop"]] = Field(
+        description="Observed sound tie labels. A nonstandard continue is retained for audit but tie_safe is false."
+    )
     notation_tie: list[Literal["start", "continue", "stop"]]
     tie_safe: bool
 

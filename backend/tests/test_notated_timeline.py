@@ -110,7 +110,10 @@ def test_nonstandard_sound_tie_continue_is_not_accepted():
     t = response.json()["notated_timeline"]
     assert t["status"] == "partial"
     assert "ambiguous_tie_notation" in codes(t)
-    assert next(n for n in t["source_notes"] if n["note_id"] == "p1:m2:n1")["tie_safe"] is False
+    middle = next(n for n in t["source_notes"] if n["note_id"] == "p1:m2:n1")
+    assert middle["tie"] == ["continue"]
+    assert middle["notation_tie"] == ["continue"]
+    assert middle["tie_safe"] is False
     assert all(len(event["source_note_ids"]) == 1 for event in t["sustained_events"])
     assert all(s["written_pitch_observation"]["lowest_written_pitch"] is None for s in t["slices"])
 

@@ -6,11 +6,12 @@
 - 最低记谱音只是记谱音高比较，不是和弦低音、根音或实音。`partial`、移调、缺失来源、同高异名拼写、静默等情况下返回 null 和稳定原因码；`unsupported` 仍不输出猜测时间片。旧 JSON 缺字段依然可用于解释接口。
 - 技术证据按小节显示观察与来源，和旧同起点和弦结果清楚分开；学生摘要、学习报告及旧和声/NCT 算法不消费新字段。
 - 修复声音 `<tie type="continue">` 被接受的问题。声音只接受 `start` / `stop`；记谱 `<tied type="continue">` 配声音 `stop+start` 的有效链保持可用。
+- 复审修复：技术证据在当前片段之外恢复持续事件 `[start,end)` 和可展开的完整延音来源链；非标准声音 `continue` 保留在来源标签中供审计，但 `tie_safe=false`，不能参与延音合并。
 - CI 新增 Python 3.11 后端 pytest 与 Node 20 前端构建。运行时上传仍仅 `.musicxml/.xml`，无新增依赖或乐理规则。
 
 ## MVP 3.7 验证
 
-见 `docs/VALIDATION.md` 中的真实 MusicXML 上传 API 测试。本地 Python 3.13 执行后端 90 项测试全部通过（环境已有一条 RequestsDependencyWarning），`npm run build` 通过。1280px 桌面和 390px 窄屏实测技术证据及来源显示，均无页面横向溢出。CI 将在推送后首次运行；本地尚未执行 Python 3.11 环境的 CI 任务，不能把本地结果称为远端通过。
+见 `docs/VALIDATION.md` 中的真实 MusicXML 上传 API 测试。本地 Python 3.13 执行后端 90 项测试全部通过（环境已有一条 RequestsDependencyWarning），`npm run build` 通过。1280px 桌面和 390px 窄屏实测技术证据及来源显示，包括第二小节完整三段延音链，均无页面横向溢出。CI 将在推送后首次运行；本地尚未执行 Python 3.11 环境的 CI 任务，不能把本地结果称为远端通过。
 
 ## MVP 3.6 历史发布说明
 

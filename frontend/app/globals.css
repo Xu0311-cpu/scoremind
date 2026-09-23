@@ -45,6 +45,9 @@
 .timeline-sources li + li { margin-top: 12px; }
 .timeline-observation-summary { margin: 0 0 8px; font-weight: 600; }
 .timeline-sources strong { color: var(--accent-dark); }
+.timeline-current-source { margin: 6px 0; font-size: 13px; overflow-wrap: anywhere; }
+.timeline-chain { margin-top: 6px; font-size: 13px; overflow-wrap: anywhere; }
+.timeline-chain summary { cursor: pointer; }
 .timeline-source { margin-top: 6px; font-size: 13px; overflow-wrap: anywhere; }
 .timeline-source summary, .timeline-diagnostics summary { cursor: pointer; }
 .timeline-source p { margin: 6px 0; }
