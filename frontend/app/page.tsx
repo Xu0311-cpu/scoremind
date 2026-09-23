@@ -1,6 +1,7 @@
 "use client";
 
 import { ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import NotatedTimeline, { type NotatedTimelineData } from "./NotatedTimeline";
 
 type KeyAnalysis = {
   tonic: string | null;
@@ -64,6 +65,7 @@ type MeasureHarmonicContext = {
 };
 
 type MeasureAnalysis = {
+  measure_index?: number | null;
   measure_number: number;
   detected_chords: DetectedChord[];
   analyzed_notes: AnalyzedNote[];
@@ -71,6 +73,7 @@ type MeasureAnalysis = {
 };
 
 type MusicXMLAnalysisResponse = {
+  notated_timeline?: NotatedTimelineData | null;
   file_name: string;
   analysis_version: string;
   key_analysis: KeyAnalysis;
@@ -561,7 +564,7 @@ export default function Home() {
       <section className="workspace">
         <header className="page-header">
           <div>
-            <p className="eyebrow">MVP 3.5</p>
+            <p className="eyebrow">MVP 3.6</p>
             <h1>ScoreMind</h1>
             <p className="product-subtitle">AI Music Score Understanding</p>
           </div>
@@ -641,7 +644,7 @@ export default function Home() {
               ) : (
                 <div className="unsupported-source-note">
                   <p>
-                    This source is guidance-only in MVP 3.5. The runtime upload control still accepts only
+                    This source is guidance-only in MVP 3.6. The runtime upload control still accepts only
                     {" "}.musicxml and .xml files after you export or convert externally.
                   </p>
                 </div>
@@ -808,8 +811,8 @@ export default function Home() {
                   <h3>Measure Walkthrough / 小节导读</h3>
                   {studentSummary.measureWalkthroughs.length > 0 ? (
                     <div className="walkthrough-list">
-                      {studentSummary.measureWalkthroughs.map((walkthrough) => (
-                        <section key={walkthrough.measureNumber} className="walkthrough-card">
+                      {studentSummary.measureWalkthroughs.map((walkthrough, index) => (
+                        <section key={`${index}-${walkthrough.measureNumber}`} className="walkthrough-card">
                           <h4>第 {walkthrough.measureNumber} 小节</h4>
                           <div className="walkthrough-block">
                             <strong>和弦</strong>
@@ -917,6 +920,7 @@ export default function Home() {
                 </section>
 
                 <h3>Technical Summary</h3>
+                <NotatedTimeline key={analysis.file_name} timeline={analysis.notated_timeline} />
                 <dl className="summary-grid compact-grid">
                   <div>
                     <dt>File</dt>
@@ -933,7 +937,7 @@ export default function Home() {
                 {measuresWithChords.length > 0 ? (
                   <div className="measure-list">
                     {measuresWithChords.map((measure) => (
-                      <section key={measure.measure_number} className="measure-card">
+                      <section key={measure.measure_index ?? measure.measure_number} className="measure-card">
                         <h3>Measure {measure.measure_number}</h3>
                         <div className="measure-chords">
                           {measure.detected_chords.map((chord, index) => {
@@ -1040,7 +1044,7 @@ export default function Home() {
                     {filteredMeasuresWithAnalyzedNotes.map((measure) => {
                       const measureSummary = summarizeNotes(measure.analyzed_notes);
                       return (
-                        <section key={`notes-${measure.measure_number}`} className="measure-card">
+                        <section key={`notes-${measure.measure_index ?? measure.measure_number}`} className="measure-card">
                           <h3>Measure {measure.measure_number}</h3>
                           <NoteSummaryGrid summary={measureSummary} />
                           <div className="note-grid">

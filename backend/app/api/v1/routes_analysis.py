@@ -9,6 +9,7 @@ from app.music.note_analyzer import (
     analyze_measure_notes,
 )
 from app.music.parser import MusicXMLParseError, parse_musicxml_bytes
+from app.music.notated_timeline import build_notated_timeline
 from app.music.roman_numeral_analyzer import RomanNumeralAnalysis, analyze_roman_numeral
 from app.schemas.analysis import (
     AnalyzedNoteEvent,
@@ -81,22 +82,23 @@ def _build_measure_harmonic_context(detected_chords: list[DetectedChord]) -> Mea
     )
 
 MVP_WARNINGS = [
-    "MVP 3.5 detects chords only from simultaneous pitch sets at identical offsets.",
+    "The notated-duration timeline is independent evidence, not a harmonic conclusion; legacy harmony and NCT paths do not consume it.",
+    "MVP 3.6 detects chords only from simultaneous pitch sets at identical offsets.",
     "Enharmonic spelling is not key-aware.",
     "Inversion is estimated from the lowest detected pitch.",
     "Roman numeral analysis is based only on the detected global key.",
     "No local modulation or secondary dominant analysis is performed.",
     "Harmonic function labels are basic MVP classifications.",
-    "MVP 3.5 note-level analysis prefers same-offset harmony, then may use carried previous chord context within the same measure.",
+    "MVP 3.6 note-level analysis prefers same-offset harmony, then may use carried previous chord context within the same measure.",
     "Carried harmony context is a conservative MVP approximation.",
     "It does not perform full sustained harmony, phrase-level harmony, or voice-leading analysis.",
     "A non_chord_tone role means the note is not part of the selected chord context; it is not full classical non-chord tone classification.",
     "Non-chord tone candidate labels are conservative learning hints, not definitive music-theory conclusions.",
     "Passing tone and neighbor tone candidates are detected only from simple same-measure adjacent pitch motion.",
-    "Confidence for non-chord tone candidates is never high in MVP 3.5.",
+    "Confidence for non-chord tone candidates is never high in MVP 3.6.",
 ]
 
-ANALYSIS_VERSION = "3.5"
+ANALYSIS_VERSION = "3.6.0"
 ANALYSIS_SCOPE = [
     "musicxml_input_only",
     "same_offset_vertical_pitch_set",
@@ -113,7 +115,7 @@ async def analyze_musicxml(file: UploadFile) -> MusicXMLAnalysisResponse:
     if not _looks_like_musicxml(file.filename):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Only .musicxml and .xml files are supported in MVP 3.5.",
+            detail="Only .musicxml and .xml files are supported in MVP 3.6.",
         )
 
     content = await file.read()
@@ -131,7 +133,7 @@ async def analyze_musicxml(file: UploadFile) -> MusicXMLAnalysisResponse:
     for measure in parsed_score.measures:
         detected_chords = [
             _to_detected_chord_response(item, global_key)
-            for item in detected_by_measure.get(measure.measure_number, [])
+            for item in detected_by_measure.get(measure.measure_index if measure.measure_index is not None else measure.measure_number, [])
         ]
         analyzed_notes = analyze_measure_notes(
             measure,
@@ -139,6 +141,7 @@ async def analyze_musicxml(file: UploadFile) -> MusicXMLAnalysisResponse:
         )
         measures.append(
             MeasureAnalysis(
+                measure_index=measure.measure_index,
                 measure_number=measure.measure_number,
                 notes=[
                     NoteEvent(
@@ -174,6 +177,7 @@ async def analyze_musicxml(file: UploadFile) -> MusicXMLAnalysisResponse:
         )
 
     return MusicXMLAnalysisResponse(
+        notated_timeline=build_notated_timeline(parsed_score.timeline_source) if parsed_score.timeline_source is not None else None,
         file_name=file.filename or "uploaded.musicxml",
         measure_count=len(measures),
         analysis_version=ANALYSIS_VERSION,

@@ -1,4 +1,33 @@
-# Validation Guide for MVP 1.4
+# Validation Guide for MVP 3.6
+
+## MVP 3.6 时间轴验证
+
+基线 `main/ac7ca5c` 重新验证：52 项后端测试通过，前端构建通过。新版本验证记录见 `docs/RELEASE_NOTES.md`；以下原有乐理核验流程保留历史范围，不代表新增推断。
+
+运行 `/opt/miniconda3/bin/python3 -m pytest`（在 backend）及 `npm run build`（在 frontend）。新增测试必须穿过真实 MusicXML 解析与上传 API，不用手工事件替代输入验证。
+
+| Fixture | 核验重点 |
+| --- | --- |
+| `timeline_overlap.musicxml` | C4=[0,4)、E4/G4=[1,2)；2 时 E/G 已结束；休止、同音重奏 |
+| `timeline_ties.musicxml` | 跨小节 tie：中间片段声音 `stop+start`、记谱 `continue`，C4 合并为 `[0,12)`；和弦仅 C 延续；不同声部同音 |
+| `timeline_broken_ties.musicxml` | 孤立 stop、未闭合 start、时间缺口、错音高、缺失 voice、重叠同音歧义 |
+| `timeline_meter_tuplets.musicxml` | 弱起、拍号变化、精确 1/3、重复显示编号与书面序号 |
+| `timeline_staff_transpose.musicxml` | part 被 music21 拆分为 PartStaff 的情况；保留 staff、记谱音高与移调诊断 |
+| `timeline_slur_grace.musicxml` | slur 不合并；装饰音保留零时值来源，不补时值 |
+| `timeline_parts.musicxml` | 多乐器相同音高 tie 不串来源 |
+| `timeline_misaligned_parts.musicxml` | 小节网格缺失时 unsupported；受控变体覆盖双方小节结束时间不同，均定位冲突小节且不输出猜测时间 |
+| `timeline_empty.musicxml` | 已计算但无音符事件，与缺失字段/未计算区分 |
+| `timeline_zero_duration.musicxml` | 无 `grace` 的零时值 C4 保留来源并返回 `partial`、`zero_duration_note`；该 C4 不产生持续事件，D4 正常保留 |
+
+测试还对 fixture 进行受控 XML 变体：缺 part ID、缺 voice/staff、缺乐器 ID、声音与记谱 tie 标签真正冲突、无拍号和无固定音高。冲突标签不能合并；普通零时值音符不能返回无诊断的 `complete`。重复解析 ID 一致；所有返回的诊断 `measure_ids` 和 `source_note_ids` 必须可在同一响应中解析；旧解释载荷同时缺失 timeline、harmonic_context、NCT 字段仍可使用。
+
+小节网格无法对齐属于结构失败：`status=unsupported`，`measures`、`source_notes`、`sustained_events`、`slices` 均为空；只返回一条 `unsupported_timeline_structure` 诊断，引用数组为空，消息点名首个冲突的书面小节（包括缺失的 part 小节或双方结束时间不同）。不向已清空的来源数组留下悬空 ID，也不输出猜测的全曲时间。
+
+手动步骤：上传 overlap 谱例并 Analyze，进入 Technical Evidence 的“持续音时间轴”。核对 `[1,2)` 为三个独立来源、`[2,4)` 只剩 C4；切到第三小节确认静默。上传 ties 谱例，确认 C4 事件 `[0,12)` 回指三个片段，中间来源为声音 `stop+start` / 记谱 `continue`，E4/G4 各自结束。再上传 broken_ties 与 zero_duration 谱例核对诊断，上传 misaligned_parts 谱例核对首个冲突小节和空引用，上传 meter_tuplets 确认同号不同顺序小节和分数显示。
+
+桌面与窄屏检查：选择器切换只展示选定小节时间片；展开来源查看 staff/voice、局部起点、全曲起点、时值、tie；长 ID 和诊断不溢出；旧响应与空响应显示明确状态。时间轴音集合不能进入学生摘要或报告充当新和弦结论。
+
+## 历史基础乐理验证流程
 
 This document defines a small validation workflow for the deterministic MusicXML analysis backend. It is intended for simple fixtures and early product review, not for professional-grade repertoire evaluation.
 

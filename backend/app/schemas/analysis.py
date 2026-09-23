@@ -1,6 +1,7 @@
 from typing import Literal
 
 from pydantic import BaseModel, Field
+from app.schemas.timeline import NotatedTimeline
 
 
 ChordQuality = Literal[
@@ -59,7 +60,7 @@ class ChordEvidence(BaseModel):
 class NonChordToneCandidate(BaseModel):
     kind: NonChordToneCandidateKind = Field(description="Conservative non-chord tone candidate kind.")
     confidence: NonChordToneCandidateConfidence = Field(
-        default="low", description="Confidence level. Never high in MVP 3.5."
+        default="low", description="Confidence level. Never high in MVP 3.6."
     )
     reason: str = Field(description="Human-readable reason for the candidate label.")
     limitations: list[str] = Field(description="Known limitations of this candidate classification.")
@@ -179,6 +180,7 @@ class MeasureHarmonicContext(BaseModel):
 
 
 class MeasureAnalysis(BaseModel):
+    measure_index: int | None = Field(default=None, description="One-based written order; distinct from display measure number. Missing in older payloads.")
     measure_number: int = Field(description="MusicXML measure number.")
     notes: list[NoteEvent] = Field(description="Flattened note events extracted from this measure.")
     source_chord_events: list[SourceChordEvent] = Field(
@@ -197,6 +199,10 @@ class MeasureAnalysis(BaseModel):
 
 
 class MusicXMLAnalysisResponse(BaseModel):
+    notated_timeline: NotatedTimeline | None = Field(
+        default=None,
+        description="Independent written-duration evidence. Null means not computed (including old payloads); empty lists mean computed with no events. Not used by legacy harmonic analysis.",
+    )
     file_name: str = Field(description="Uploaded file name.")
     measure_count: int = Field(description="Number of parsed measures returned in the response.")
     analysis_version: str = Field(description="Version of the deterministic analysis contract.")

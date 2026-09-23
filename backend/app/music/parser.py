@@ -6,6 +6,8 @@ import tempfile
 
 from music21 import converter, note, chord as m21_chord, stream
 
+from app.music.timeline_normalizer import NormalizedTimeline, normalize_musicxml
+
 
 class MusicXMLParseError(ValueError):
     """Raised when a MusicXML payload cannot be parsed."""
@@ -38,12 +40,14 @@ class ParsedMeasure:
     measure_number: int
     notes: list[ParsedNote] = field(default_factory=list)
     source_chord_events: list[ParsedChord] = field(default_factory=list)
+    measure_index: int | None = None
 
 
 @dataclass
 class ParsedScore:
     measures: list[ParsedMeasure]
     source_stream: stream.Stream | None = None
+    timeline_source: NormalizedTimeline | None = None
 
 
 def parse_musicxml_bytes(content: bytes, file_name: str = "uploaded.musicxml") -> ParsedScore:
@@ -59,20 +63,22 @@ def parse_musicxml_bytes(content: bytes, file_name: str = "uploaded.musicxml") -
     except Exception as exc:  # music21 raises several parser-specific exceptions.
         raise MusicXMLParseError("Invalid or unsupported MusicXML file.") from exc
 
-    return _extract_score(parsed)
+    score = _extract_score(parsed)
+    score.timeline_source = normalize_musicxml(content)
+    return score
 
 
 def _extract_score(parsed: stream.Stream) -> ParsedScore:
     parts = list(parsed.parts) if hasattr(parsed, "parts") and parsed.parts else [parsed]
-    measures_by_number: dict[int, ParsedMeasure] = {}
+    measures_by_position: dict[int, ParsedMeasure] = {}
 
     for part_index, part in enumerate(parts, start=1):
         part_id = _part_id(part, part_index)
-        for measure in part.getElementsByClass(stream.Measure):
+        for measure_index, measure in enumerate(part.getElementsByClass(stream.Measure), start=1):
             measure_number = int(measure.number or 0)
-            parsed_measure = measures_by_number.setdefault(
-                measure_number,
-                ParsedMeasure(measure_number=measure_number),
+            parsed_measure = measures_by_position.setdefault(
+                measure_index,
+                ParsedMeasure(measure_number=measure_number, measure_index=measure_index),
             )
 
             for element in measure.recurse().notes:
@@ -119,7 +125,7 @@ def _extract_score(parsed: stream.Stream) -> ParsedScore:
                             )
                         )
 
-    measures = [measures_by_number[key] for key in sorted(measures_by_number)]
+    measures = list(measures_by_position.values())
     return ParsedScore(measures=measures, source_stream=parsed)
 
 

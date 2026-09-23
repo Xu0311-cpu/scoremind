@@ -1,10 +1,19 @@
-# ScoreMind — AI Music Score Understanding (MVP 3.5)
+# ScoreMind — AI Music Score Understanding (MVP 3.6)
 
 ScoreMind is a deterministic MusicXML score understanding tool for music students. It parses symbolic score data, analyzes basic harmony and note-level chord membership, renders a score preview, and turns the result into student-friendly learning views.
 
-Current release: MVP 3.5. Current uploads remain limited to `.musicxml` and `.xml`.
+Current release: MVP 3.6. Current uploads remain limited to `.musicxml` and `.xml`.
 
-MVP 3.5 adds conservative non-chord tone candidate hints (passing tone / neighbor tone candidates) for student learning, based on simple same-measure adjacent pitch motion. Labels use cautious wording ("可能的经过音候选", "可能的辅助音候选") and confidence is never high. All existing MVP 3.4.1 harmonic_context behavior is preserved.
+MVP 3.6 adds an auditable **notated-duration timeline** with exact time, source-note references, conservative tie joining, and a per-measure Technical Evidence view. This is a written-pitch active-note set, not a new chord or harmonic conclusion. Existing harmony, note-role, and low-confidence NCT candidate rules do not consume it.
+
+### MVP 3.6 持续音时间轴
+
+- 按 MusicXML 记谱时值建立 `[start, end)` 时间片，正确显示错开起音、结束边界、休止和安全的跨小节延音线。
+- `notated_timeline` 是独立增量字段：原始片段、持续事件、来源引用、时间片、可定位诊断。时间以四分音符为单位，JSON 使用精确分数字符串（例如 `"4/3"`），不是浮点近似。
+- 技术证据中的“持续音时间轴”按小节查看，区分书面顺序与显示小节号；不新增学生和声结论，也不改变学习报告结构。
+- 一个必要的数据修正：旧解析不再合并重复编号的小节，响应增加可选 `measure_index`。基础和弦识别、调性、罗马数字、音符分类规则保留；旧 JSON 缺少新字段仍可解释。
+- 只处理书面顺序，不展开反复，不模拟踏板或演奏时值。移调乐器保留**记谱音高**并给出诊断，不输出混合实音。缺失身份、损坏延音线和不支持结构均有诊断。
+- 参见 [架构](docs/ARCHITECTURE.md)、[验证说明](docs/VALIDATION.md)、[发布说明](docs/RELEASE_NOTES.md)。
 
 ## Why I Built This
 
@@ -24,6 +33,7 @@ ScoreMind is not a chatbot. It is a structured score-understanding prototype bui
 - Upload `.musicxml` or `.xml` files.
 - Use the Score Input Workspace to understand supported and unsupported score sources.
 - Render a MusicXML score preview.
+- Inspect written-duration slices and safe tie chains with traceable note sources in Technical Evidence.
 - Detect basic triads and seventh chords.
 - Estimate global key and conservative Roman numerals.
 - Label basic harmonic functions.
@@ -106,11 +116,11 @@ ScoreMind demonstrates an AI product architecture where domain reasoning is dete
 - If you use MuseScore or notation software, export MusicXML/XML first, then upload.
 - If you only have PDF, image, screenshot, or scanned paper, convert externally to MusicXML before using this MVP.
 - The Score Input Workspace explains these paths in the frontend, but it does not add PDF/image/MIDI/audio upload.
-- Input conversion is future work. MVP 3.5 keeps the runtime upload path limited to MusicXML/XML.
+- Input conversion is future work. MVP 3.6 keeps the runtime upload path limited to MusicXML/XML.
 
 ## Sample Files
 
-MVP 3.5 includes downloadable demo MusicXML files in `frontend/public/samples`:
+MVP 3.6 includes downloadable demo MusicXML files in `frontend/public/samples`:
 
 - `frontend/public/samples/c_major_progression.musicxml`: demonstrates global key, Roman numerals, harmonic functions, and Measure Walkthrough.
 - `frontend/public/samples/carried_context_notes.musicxml`: demonstrates note-level chord-tone labels and carried previous chord context.
@@ -121,7 +131,7 @@ In the frontend, use the `Try sample files` panel to download a sample, then upl
 
 - Backend deterministic analysis remains the source of truth.
 - Student Analysis is computed only from existing backend analysis JSON and does not infer new conclusions.
-- MusicXML/XML remains the only runtime input path in MVP 3.5.
+- MusicXML/XML remains the only runtime input path in MVP 3.6.
 - OMR feasibility work lives only in `docs/OMR_EXPERIMENT.md` and `experiments/omr`.
 - Input conversion, real LLM explanation, and advanced music-theory analysis are future work.
 
@@ -195,4 +205,4 @@ Validation docs:
 
 ## Limitations
 
-MVP 3.5 renders MusicXML only and does not use an LLM. It still does not support PDF/image/OMR, `.mxl`, audio, MIDI, local modulation, full classical non-chord tone classification, full sustained harmony inference, phrase-level harmony, melody/voice-leading analysis, or jazz/modern harmony. Non-chord tone candidate hints are conservative learning aids only and confidence is never high. OMR work remains isolated research only and does not add runtime input support. Sample files are for demo use only and do not add conversion support. Expert Review is not part of the core UI.
+MVP 3.6 renders MusicXML only and does not use an LLM. It still does not support PDF/image/OMR, `.mxl`, audio, MIDI, local modulation, full classical non-chord tone classification, full sustained harmony inference, phrase-level harmony, melody/voice-leading analysis, or jazz/modern harmony. Non-chord tone candidate hints are conservative learning aids only and confidence is never high. OMR work remains isolated research only and does not add runtime input support. Sample files are for demo use only and do not add conversion support. Expert Review is not part of the core UI.
