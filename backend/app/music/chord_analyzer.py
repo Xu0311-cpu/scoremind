@@ -53,7 +53,7 @@ class ChordEvidence:
 
 def analyze_measures(measures: list[ParsedMeasure]) -> dict[int, list[AnalyzedChord]]:
     return {
-        measure.measure_number: analyze_measure(measure)
+        (measure.measure_index if measure.measure_index is not None else measure.measure_number): analyze_measure(measure)
         for measure in measures
     }
 
