@@ -87,6 +87,12 @@ Important areas:
 
 OpenSheetMusicDisplay renders the uploaded MusicXML text in the browser. This preview is for visual verification only. It is not OMR and does not convert images or PDFs.
 
+### MVP 3.8 书面小节定位
+
+`scoreMeasureNavigation.ts` 以 `notated_timeline.measures[].measure_index` 建立全曲书面序号选项；显示小节号只用于选项文案。`ScorePreview.tsx` 在客户端加载 OSMD 1.9.7，核对 `Sheet.SourceMeasures`、`GraphicSheet.MeasureList` 的数量与顺序、每个图形小节的 `parentSourceMeasure`、谱表数与所属页面，再使用 `Drawer.DrawOverlayLine` 绘出选定小节每个谱表的细框。滚动使用绘图接口返回的节点，不查询内部 SVG 小节选择器，也不宣称音符级定位。
+
+小节选中序号由 `page.tsx` 持有，谱面上方导航与 `NotatedTimeline.tsx` 共用；更换文件或重新分析会清除旧选择，分析成功后默认选择首个书面小节。谱面宽度变化时重新渲染并复核图形位置。旧 JSON 没有时间轴、时间轴 `unsupported`、谱面未渲染、part 网格或 OSMD 映射不吻合时，显示不可定位原因并不绘制高亮；`partial` 只有来源与书面位置仍可验证时才允许定位。3.8 不改变任何后端乐理算法、时间轴算法、解释路径或上传格式。
+
 ## Student View vs Technical Evidence
 
 Student Analysis is the default user-facing path. It includes:

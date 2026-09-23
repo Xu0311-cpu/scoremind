@@ -2,7 +2,7 @@
 
 ## 项目现状
 
-ScoreMind 是面向音乐学习者的确定性 MusicXML 乐谱分析系统。当前版本为 MVP 3.7，运行时仅接受 `.musicxml` 和 `.xml` 文件。
+ScoreMind 是面向音乐学习者的确定性 MusicXML 乐谱分析系统。当前版本为 MVP 3.8，运行时仅接受 `.musicxml` 和 `.xml` 文件。
 
 后端负责解析符号化乐谱并生成可审计的结构化分析；前端负责乐谱预览、学习视图、技术证据和 Markdown 学习报告。确定性后端输出是产品的事实来源，解释层和前端不得自行推断新的乐理结论。
 
@@ -23,6 +23,7 @@ ScoreMind 是面向音乐学习者的确定性 MusicXML 乐谱分析系统。当
 - 支持同一 offset 和小节内前序和弦上下文下的音符角色判断。
 - MVP 3.6 新增独立 `notated_timeline`：记谱音高、Fraction 时间、逐音来源、安全 tie 链和半开时间片；旧和声/NCT 不使用该字段，音集合不能称作新和弦结论。
 - MVP 3.7 为时间片增加可选 `written_pitch_observation`：活动音、新起音、此前延续音、来源和有条件的最低记谱音；`partial` 等不可比较时返回原因，不作为和声推断。
+- MVP 3.8 在前端以书面小节序号连接谱面和技术证据，只在 OSMD 来源/图形小节对应关系经过验证后高亮全部谱表；不做音符级定位，不改变后端分析。
 - 新时间轴来源以 XML part/staff/voice/instrument 标签为准，不用 music21 随机 ID 或跨小节上下文猜身份。书面小节顺序与显示编号独立，缺失身份或歧义 tie 必须诊断。
 - MVP 3.5 提供经过音/辅助音候选提示；它们只是保守学习提示，置信度固定为 `low`，不能表述为最终乐理结论。MVP 3.6 的持续音时间轴不改变这条边界。
 - 当前没有真实 LLM/OpenAI 调用、数据库、认证、用户系统或持久化任务队列。
@@ -55,6 +56,7 @@ ScoreMind 是面向音乐学习者的确定性 MusicXML 乐谱分析系统。当
 - `frontend/app/page.tsx`：当前单页产品流程和主要 UI 逻辑。
 - `frontend/app/globals.css`：全局样式。
 - `frontend/app/NotatedTimeline.tsx`：按小节显示时间片、来源和诊断的技术证据视图。
+- `frontend/app/ScorePreview.tsx`、`frontend/app/scoreMeasureNavigation.ts`：客户端 OSMD 渲染、书面小节映射验证、标框与滚动；`WrittenMeasureNavigator.tsx` 提供共享导航。
 - `frontend/public/samples/`：可下载演示样例，不代表转换能力。
 
 ## 开发约束

@@ -18,18 +18,39 @@
   min-width: 0;
 }
 
-.timeline-selector {
-  display: grid;
-  gap: 8px;
-  max-width: 540px;
+.written-measure-navigator {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 18px 0 8px;
+  min-width: 0;
 }
 
-.timeline-selector select {
+.written-measure-navigator label {
+  display: grid;
+  gap: 6px;
+  flex: 1 1 260px;
+  min-width: 0;
+  max-width: 480px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.written-measure-navigator select {
   width: 100%;
   min-width: 0;
   min-height: 44px;
   padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--text);
+  background: var(--panel);
 }
+
+.written-measure-navigator button { min-width: 96px; }
+.score-location-status { margin: 12px 0 0; font-size: 13px; color: var(--accent-dark); }
+.score-location-status.timeline-caution { color: var(--text); }
 
 .timeline-table-wrap { max-width: 100%; overflow-x: auto; }
 .timeline-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
@@ -923,6 +944,8 @@ tr:last-child td {
 }
 
 @media (max-width: 760px) {
+  .written-measure-navigator label { order: -1; flex-basis: 100%; max-width: none; }
+  .written-measure-navigator button { flex: 1 1 calc(50% - 5px); }
   .timeline-table,
   .timeline-table tbody,
   .timeline-table tr,

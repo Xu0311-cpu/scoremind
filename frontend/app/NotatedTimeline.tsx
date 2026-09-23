@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import WrittenMeasureNavigator from "./WrittenMeasureNavigator";
+import { writtenMeasureOptions } from "./scoreMeasureNavigation";
 
 type SourceNote = {
   note_id: string;
@@ -69,13 +70,17 @@ export type NotatedTimelineData = {
   }[];
 };
 
-export default function NotatedTimeline({ timeline }: { timeline?: NotatedTimelineData | null }) {
-  const [selection, setSelection] = useState("");
-  const measure = timeline?.measures.find((m) => m.measure_id === selection) ?? timeline?.measures[0];
-  const slices = timeline?.slices.filter((s) => measure && s.measure_ids.includes(measure.measure_id)) ?? [];
+export default function NotatedTimeline({ timeline, selectedMeasureIndex, onSelectMeasureIndex }: {
+  timeline?: NotatedTimelineData | null;
+  selectedMeasureIndex: number | null;
+  onSelectMeasureIndex: (index: number) => void;
+}) {
+  const measures = timeline?.measures.filter((measure) => measure.measure_index === selectedMeasureIndex) ?? [];
+  const measureIds = new Set(measures.map((measure) => measure.measure_id));
+  const slices = timeline?.slices.filter((slice) => slice.measure_ids.some((id) => measureIds.has(id))) ?? [];
   const events = new Map(timeline?.sustained_events.map((e) => [e.event_id, e]));
   const sources = new Map(timeline?.source_notes.map((n) => [n.note_id, n]));
-  const diagnostics = timeline?.diagnostics.filter((d) => !measure || d.measure_ids.length === 0 || d.measure_ids.includes(measure.measure_id)) ?? [];
+  const diagnostics = timeline?.diagnostics.filter((diagnostic) => !measures.length || diagnostic.measure_ids.length === 0 || diagnostic.measure_ids.some((id) => measureIds.has(id))) ?? [];
 
   return (
     <section className="notated-timeline" aria-labelledby="timeline-title">
@@ -91,19 +96,10 @@ export default function NotatedTimeline({ timeline }: { timeline?: NotatedTimeli
               {timeline.status === "unsupported" ? "当前结构无法可靠建立时间轴，请查看诊断。" : "存在来源或支持范围诊断。音集合可能不完整，请结合原谱核对。"}
             </p>
           )}
-          {measure ? (
+          {measures.length ? (
             <>
-              <label className="timeline-selector">
-                查看小节（按书面顺序）
-                <select value={measure.measure_id} onChange={(e) => setSelection(e.target.value)}>
-                  {timeline.measures.map((m) => (
-                    <option key={m.measure_id} value={m.measure_id}>
-                      乐器 {m.part_id ?? `#${m.part_index}`} · 第 {m.measure_index} 个小节 · 标号 {m.measure_number || "未提供"}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <p className="panel-note">全曲区间 [{measure.start}, {measure.end}) · 时间片包含该时段所有乐器的音，来源中的小节 ID 可供核对。</p>
+              <WrittenMeasureNavigator options={writtenMeasureOptions(timeline)} selected={selectedMeasureIndex} onSelect={onSelectMeasureIndex} label="技术证据书面小节导航" />
+              <p className="panel-note">全曲区间 [{measures[0].start}, {measures[0].end}) · {measures.map((measure) => `乐器 ${measure.part_id ?? `#${measure.part_index}`}：${measure.measure_id}`).join("；")}。时间片汇总该时段所有乐器的音，标号仅供阅读，不用于谱面定位。</p>
               {slices.length ? (
                 <div className="timeline-table-wrap">
                   <table className="timeline-table">
@@ -172,8 +168,8 @@ export default function NotatedTimeline({ timeline }: { timeline?: NotatedTimeli
               ) : <p>本小节没有正时值时间片。</p>}
               <details className="timeline-diagnostics">
                 <summary>本小节原始音符片段（含零时值音）</summary>
-                {timeline.source_notes.filter((n) => n.measure_id === measure.measure_id).length ? (
-                  timeline.source_notes.filter((n) => n.measure_id === measure.measure_id).map((n) => <SourceDetails key={n.note_id} source={n} id={n.note_id} />)
+                {timeline.source_notes.filter((note) => measureIds.has(note.measure_id)).length ? (
+                  timeline.source_notes.filter((note) => measureIds.has(note.measure_id)).map((note) => <SourceDetails key={note.note_id} source={note} id={note.note_id} />)
                 ) : <p>本小节没有已支持的记谱音符片段。</p>}
               </details>
             </>
