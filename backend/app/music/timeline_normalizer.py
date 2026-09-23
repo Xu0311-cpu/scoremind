@@ -227,7 +227,7 @@ def _normalize_part(part: ET.Element, pi: int, ids: list[str | None],
                 visual_types = set(visual)
                 if visual_types == {"continue"}:
                     visual_types = {"start", "stop"}
-                tie_safe = (len(ties) == len(set(ties)) and set(ties) <= {"start", "continue", "stop"}
+                tie_safe = (len(ties) == len(set(ties)) and set(ties) <= {"start", "stop"}
                             and len(visual) == len(set(visual)))
                 if visual and visual_types != set(ties):
                     tie_safe = False
@@ -238,7 +238,7 @@ def _normalize_part(part: ET.Element, pi: int, ids: list[str | None],
                 out.notes.append(Segment(
                     nid, mid, pi, pid, iid, instruments.get(iid), staff, voice, mi, number,
                     note_index, local_start, absolute + local_start, duration, pitch, octave,
-                    sorted(set(ties) & {"start", "continue", "stop"}),
+                    sorted(set(ties) & {"start", "stop"}),
                     sorted(set(visual) & {"start", "continue", "stop"}),
                     tie_safe and identity_safe and voice is not None and staff is not None
                     and iid is not None and not grace,

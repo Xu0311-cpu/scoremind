@@ -53,6 +53,23 @@ class SustainedNoteEvent(BaseModel):
     source_note_ids: list[str]
 
 
+class ObservedWrittenNote(BaseModel):
+    event_id: str
+    pitch: str = Field(description="Written pitch, not a chord label or concert pitch.")
+    source_note_ids: list[str] = Field(description="Notated fragments active in this exact slice.")
+    onset: Literal["new", "continuing"] = Field(description="New sustained event at this boundary, or active from an earlier boundary.")
+
+
+class SlicePitchObservation(BaseModel):
+    active_notes: list[ObservedWrittenNote] = Field(default_factory=list)
+    new_onset_event_ids: list[str] = Field(default_factory=list)
+    continuing_event_ids: list[str] = Field(default_factory=list)
+    lowest_written_pitch: str | None = Field(default=None, description="Lowest comparable written pitch; null when comparison is unsafe or no notes are active.")
+    lowest_event_ids: list[str] = Field(default_factory=list)
+    comparison_status: Literal["available", "unavailable"] = "unavailable"
+    reasons: list[str] = Field(default_factory=list, description="Stable reason codes when a lowest-pitch comparison is withheld.")
+
+
 class TimelineSlice(BaseModel):
     start: ExactTime
     end: ExactTime
@@ -60,6 +77,9 @@ class TimelineSlice(BaseModel):
     active_event_ids: list[str]
     source_note_ids: list[str] = Field(description="Notated fragments active in this slice, not every fragment of a tied event.")
     is_silent: bool = Field(description="No supported pitched event active; inspect diagnostics for omitted input.")
+    written_pitch_observation: SlicePitchObservation | None = Field(
+        default=None, description="Auditable written-pitch observation; null for pre-3.7 analysis JSON. Never a chord inference."
+    )
 
 
 class NotatedTimeline(BaseModel):
@@ -70,7 +90,8 @@ class NotatedTimeline(BaseModel):
     pitch_basis: Literal["written"] = "written"
     support_scope: list[str] = Field(default_factory=lambda: [
         "score_partwise_written_order", "notated_duration_only", "explicit_safe_ties_only",
-        "no_repeat_expansion", "no_pedal_or_acoustics", "not_used_by_legacy_harmony",
+        "written_pitch_slice_observations_only", "no_repeat_expansion",
+        "no_pedal_or_acoustics", "not_used_by_legacy_harmony",
     ])
     measures: list[TimelineMeasure] = Field(default_factory=list)
     source_notes: list[SourceNoteSegment] = Field(default_factory=list)

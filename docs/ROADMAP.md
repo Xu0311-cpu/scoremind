@@ -1,9 +1,10 @@
 # Roadmap
 
-This roadmap describes future work. Items listed here are not current MVP 3.6 capabilities unless explicitly implemented elsewhere.
+This roadmap describes future work. Items listed here are not current MVP 3.7 capabilities unless explicitly implemented elsewhere.
 
 ## Current / Completed
 
+- MVP 3.7: 可审计的逐片记谱音观察、新起音/延续音来源、保守最低记谱音比较、技术证据展示与最小 CI；旧和声分析不使用观察字段。
 - MVP 3.6: 独立记谱时值时间轴、严格延音线基础、精确分数时间、逐音来源和可定位诊断；技术证据按小节查看。
 - 重复小节显示编号不再被旧小节容器合并；新增书面顺序字段。
 
@@ -43,4 +44,4 @@ This roadmap describes future work. Items listed here are not current MVP 3.6 ca
 
 ## Current Boundary
 
-The current system is MusicXML/XML only. MVP 3.6 includes conservative non-chord tone candidate hints (possible passing tone, possible neighbor tone) for student learning, but the runtime app still does not perform OMR, PDF/image upload, MIDI/audio analysis, local modulation, full classical non-chord tone classification, full sustained harmony inference, melody analysis, voice-leading analysis, or jazz/modern harmony analysis.
+The current system is MusicXML/XML only. MVP 3.7 retains conservative non-chord tone candidate hints (possible passing tone, possible neighbor tone) for student learning, but the runtime app still does not perform OMR, PDF/image upload, MIDI/audio analysis, local modulation, full classical non-chord tone classification, full sustained harmony inference, melody analysis, voice-leading analysis, or jazz/modern harmony analysis. Time-slice pitch observations are not harmony classifications.

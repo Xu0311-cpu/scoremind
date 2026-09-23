@@ -2,7 +2,7 @@
 
 ## 项目现状
 
-ScoreMind 是面向音乐学习者的确定性 MusicXML 乐谱分析系统。当前版本为 MVP 3.6，运行时仅接受 `.musicxml` 和 `.xml` 文件。
+ScoreMind 是面向音乐学习者的确定性 MusicXML 乐谱分析系统。当前版本为 MVP 3.7，运行时仅接受 `.musicxml` 和 `.xml` 文件。
 
 后端负责解析符号化乐谱并生成可审计的结构化分析；前端负责乐谱预览、学习视图、技术证据和 Markdown 学习报告。确定性后端输出是产品的事实来源，解释层和前端不得自行推断新的乐理结论。
 
@@ -22,6 +22,7 @@ ScoreMind 是面向音乐学习者的确定性 MusicXML 乐谱分析系统。当
 - 支持基础三和弦、七和弦、转位、全局调性、保守的罗马数字与基础和声功能。
 - 支持同一 offset 和小节内前序和弦上下文下的音符角色判断。
 - MVP 3.6 新增独立 `notated_timeline`：记谱音高、Fraction 时间、逐音来源、安全 tie 链和半开时间片；旧和声/NCT 不使用该字段，音集合不能称作新和弦结论。
+- MVP 3.7 为时间片增加可选 `written_pitch_observation`：活动音、新起音、此前延续音、来源和有条件的最低记谱音；`partial` 等不可比较时返回原因，不作为和声推断。
 - 新时间轴来源以 XML part/staff/voice/instrument 标签为准，不用 music21 随机 ID 或跨小节上下文猜身份。书面小节顺序与显示编号独立，缺失身份或歧义 tie 必须诊断。
 - MVP 3.5 提供经过音/辅助音候选提示；它们只是保守学习提示，置信度固定为 `low`，不能表述为最终乐理结论。MVP 3.6 的持续音时间轴不改变这条边界。
 - 当前没有真实 LLM/OpenAI 调用、数据库、认证、用户系统或持久化任务队列。
@@ -38,6 +39,7 @@ ScoreMind 是面向音乐学习者的确定性 MusicXML 乐谱分析系统。当
 - `backend/app/music/parser.py`：MusicXML 解析与内部事件模型。
 - `backend/app/music/timeline_normalizer.py`：独立 XML 来源与精确记谱时间规范化。
 - `backend/app/music/notated_timeline.py`：严格 tie 合并与持续音时间片。
+- `backend/app/music/timeline_observations.py`：逐片记谱音观察；最低记谱音比较有保守门槛。
 - `backend/app/schemas/timeline.py`：独立时间轴契约；旧载荷缺省为 null，与计算后空结果不同。
 - `backend/app/music/chord_analyzer.py`：确定性和弦识别。
 - `backend/app/music/key_analyzer.py`：全局调性分析。

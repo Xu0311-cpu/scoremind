@@ -1,4 +1,12 @@
-# Validation Guide for MVP 3.6
+# Validation Guide for MVP 3.7
+
+## MVP 3.7 记谱音观察验证
+
+从真实 MusicXML 通过 `/api/v1/analyze/musicxml` 上传，不以手工构造事件替代验收。`timeline_moving_upper.musicxml` 验证 C4 在 `[0,4)` 持续，E4 `[1,2)`、G4 `[2,3)` 依次新起；这两个时间片各有持续 C4，但旧 `detected_chords` 仍为空。`timeline_overlap.musicxml` 验证 E/G 恰在 2 结束、重奏产生新事件、休止片不带过旧音。`timeline_ties.musicxml` 验证跨小节 `stop+start` / 记谱 `continue` 的来源片段作为延续而非新起；多声部同音保留两个事件。受控 XML 变体将声音 `<tie type="continue">` 改为非标准值，必须诊断并拒绝合并。
+
+`timeline_staff_transpose.musicxml`、身份缺失变体、损坏 tie 和 `timeline_misaligned_parts.musicxml` 分别核验最低音比较不可用、原因码、结构失败不输出猜测片段。旧响应缺少 `written_pitch_observation` 仍可用于解释；空观察与未计算需区分。对新增引用断言可在当前响应内回溯，重复解析结果稳定。桌面及窄屏应检查按小节选择、精确分数、来源展开、静默与诊断，不将活动音集合展示为和弦。
+
+本地命令：在 `backend/` 运行 `/opt/miniconda3/bin/python3 -m pytest`，在 `frontend/` 运行 `npm run build`。本次本地 Python 3.13 下 90 项测试通过，前端构建通过；1280px 与 390px 页面核对无横向溢出。`.github/workflows/ci.yml` 在 push / PR 时执行 Python 3.11 后端测试和 Node 20 前端构建；本地通过不代表远端 CI 已运行。
 
 ## MVP 3.6 时间轴验证
 

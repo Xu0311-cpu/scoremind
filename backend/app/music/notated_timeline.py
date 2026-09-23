@@ -4,6 +4,7 @@ from dataclasses import asdict
 from fractions import Fraction
 
 from app.music.timeline_normalizer import NormalizedTimeline, Segment
+from app.music.timeline_observations import add_slice_pitch_observations
 from app.schemas.timeline import (
     NotatedTimeline, SourceNoteSegment, SustainedNoteEvent, TimelineMeasure, TimelineSlice,
 )
@@ -125,4 +126,5 @@ def build_notated_timeline(source: NormalizedTimeline) -> NotatedTimeline:
         ))
     if result.diagnostics:
         result.status = "partial"
+    add_slice_pitch_observations(result)
     return result

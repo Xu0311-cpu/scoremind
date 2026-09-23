@@ -1,4 +1,18 @@
-# MVP 3.6 Release Notes
+# MVP 3.7 Release Notes
+
+## 当前发布：3.7.0
+
+- 每个记谱时间片新增可选 `written_pitch_observation`：活动记谱音、该片新起音、此前延续音、当前片段的来源 ID，以及安全时的最低记谱音。时间仍为精确四分音符分数字符串，区间仍为 `[start,end)`。
+- 最低记谱音只是记谱音高比较，不是和弦低音、根音或实音。`partial`、移调、缺失来源、同高异名拼写、静默等情况下返回 null 和稳定原因码；`unsupported` 仍不输出猜测时间片。旧 JSON 缺字段依然可用于解释接口。
+- 技术证据按小节显示观察与来源，和旧同起点和弦结果清楚分开；学生摘要、学习报告及旧和声/NCT 算法不消费新字段。
+- 修复声音 `<tie type="continue">` 被接受的问题。声音只接受 `start` / `stop`；记谱 `<tied type="continue">` 配声音 `stop+start` 的有效链保持可用。
+- CI 新增 Python 3.11 后端 pytest 与 Node 20 前端构建。运行时上传仍仅 `.musicxml/.xml`，无新增依赖或乐理规则。
+
+## MVP 3.7 验证
+
+见 `docs/VALIDATION.md` 中的真实 MusicXML 上传 API 测试。本地 Python 3.13 执行后端 90 项测试全部通过（环境已有一条 RequestsDependencyWarning），`npm run build` 通过。1280px 桌面和 390px 窄屏实测技术证据及来源显示，均无页面横向溢出。CI 将在推送后首次运行；本地尚未执行 Python 3.11 环境的 CI 任务，不能把本地结果称为远端通过。
+
+## MVP 3.6 历史发布说明
 
 ## 当前发布：3.6.0
 
