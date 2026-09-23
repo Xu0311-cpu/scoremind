@@ -52,6 +52,12 @@ The backend does not accept PDFs or images in the current MVP.
 
 兼容边界：旧分析的三个乐理算法与音符规则不变，也不使用持续音集合。修正旧小节容器按显示编号合并的问题，改用书面序号，并在 API 添加可选 `measure_index`；重复编号不再制造同拍和弦或跨小节上下文。旧分析中的 part/voice 字段仍是原有 music21 路径，不应当作新时间轴来源键。新规范化层遇到不支持结构时不会阻断原有分析。
 
+### MVP 3.7 记谱音观察
+
+`timeline_observations.py` 在 3.6 时间片完成后生成独立的 `written_pitch_observation`。每个活动持续事件保留该片实际活动的 source note IDs，并按事件起点是否等于片段起点区分 `new` / `continuing`；跨小节 tie 的后续来源仍属于同一持续事件，不会变成新的起音。新增字段可选，旧 JSON 中缺失或 null 代表未计算；已计算的静默片段有空 `active_notes` 和 `no_active_supported_notes` 原因。
+
+最低记谱音只在时间轴 `complete`、来源完整且音高可比较时给出；`partial`、移调乐器、缺失引用、不同拼写的同高最低音或静默时返回 null 与原因码。它是**记谱音高的数值比较**，不是低音功能、根音或实音。声音 `<tie>` 只接受 MusicXML 的 `start`/`stop`；记谱 `<tied type="continue">` 对应声音 `stop+start` 仍能连接。原有 detected_chords、harmonic_context、note role、NCT 与解释服务都不读取观察字段。前端仅在 Technical Evidence 中展示，学习报告不将其转为和声结论。
+
 ### 保留的乐理路径
 
 1. Chord analysis detects vertical pitch sets at the same measure offset.

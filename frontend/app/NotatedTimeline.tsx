@@ -46,6 +46,20 @@ export type NotatedTimelineData = {
     active_event_ids: string[];
     source_note_ids: string[];
     is_silent: boolean;
+    written_pitch_observation?: {
+      active_notes: {
+        event_id: string;
+        pitch: string;
+        source_note_ids: string[];
+        onset: "new" | "continuing";
+      }[];
+      new_onset_event_ids: string[];
+      continuing_event_ids: string[];
+      lowest_written_pitch: string | null;
+      lowest_event_ids: string[];
+      comparison_status: "available" | "unavailable";
+      reasons: string[];
+    } | null;
   }[];
   diagnostics: {
     code: string;
@@ -66,7 +80,7 @@ export default function NotatedTimeline({ timeline }: { timeline?: NotatedTimeli
   return (
     <section className="notated-timeline" aria-labelledby="timeline-title">
       <h3 id="timeline-title">持续音时间轴</h3>
-      <p className="panel-note">按记谱时值显示持续的音，使用记谱音高。音集合不是新的和弦结论，旧和声分析尚未使用此时间轴。</p>
+      <p className="panel-note">按记谱时值观察持续音、新起音和此前延续音。这里展示的是记谱音集合，不是检测到的和弦；同起点和弦结果仍来自独立的旧分析。</p>
       {!timeline ? (
         <p role="status">此响应未计算时间轴（可能来自旧版本）。重新分析后可查看。</p>
       ) : (
@@ -93,14 +107,48 @@ export default function NotatedTimeline({ timeline }: { timeline?: NotatedTimeli
               {slices.length ? (
                 <div className="timeline-table-wrap">
                   <table className="timeline-table">
-                    <thead><tr><th>全曲区间</th><th>持续的记谱音与来源</th></tr></thead>
+                    <thead><tr><th>全曲区间</th><th>记谱音观察与来源（非和弦判断）</th></tr></thead>
                     <tbody>
                       {slices.map((slice) => (
                         <tr key={`${slice.start}-${slice.end}`}>
                           <td>[{slice.start}, {slice.end})</td>
                           <td>
-                            {slice.is_silent ? "无已支持的持续音（静默；有诊断时须核对遗漏）" : (
+                            {slice.written_pitch_observation ? (
+                              <>
+                                <p className="timeline-observation-summary">
+                                  新起音 {slice.written_pitch_observation.new_onset_event_ids.length} · 此前延续音 {slice.written_pitch_observation.continuing_event_ids.length}
+                                  {slice.written_pitch_observation.comparison_status === "available"
+                                    ? ` · 最低记谱音 ${slice.written_pitch_observation.lowest_written_pitch}`
+                                    : " · 最低音不作比较"}
+                                </p>
+                                {slice.written_pitch_observation.reasons.length > 0 && (
+                                  <p className="timeline-caution">比较受限：{slice.written_pitch_observation.reasons.join("、")}。请核对诊断及原谱。</p>
+                                )}
+                                {slice.written_pitch_observation.active_notes.length ? (
+                                  <ul className="timeline-sources">
+                                    {slice.written_pitch_observation.active_notes.map((note) => {
+                                      const event = events.get(note.event_id);
+                                      return (
+                                        <li key={note.event_id}>
+                                          <strong>{note.pitch}</strong> · {note.onset === "new" ? "此刻新起音" : "此前延续音"} · 事件 {note.event_id}
+                                          {event ? ` · 持续事件 [${event.start}, ${event.end})` : " · 持续事件来源缺失"}
+                                          <p className="timeline-current-source">当前时间片来源：{note.source_note_ids.join(", ") || "缺失"}</p>
+                                          {note.source_note_ids.map((sid) => <SourceDetails key={sid} source={sources.get(sid)} id={sid} />)}
+                                          {event && event.source_note_ids.length > 1 && (
+                                            <details className="timeline-chain">
+                                              <summary>完整延音链：{event.source_note_ids.join(" → ")}</summary>
+                                              {event.source_note_ids.map((sid) => <SourceDetails key={sid} source={sources.get(sid)} id={sid} />)}
+                                            </details>
+                                          )}
+                                        </li>
+                                      );
+                                    })}
+                                  </ul>
+                                ) : <p>无已支持的持续音；如有诊断，不能据此断言原谱完全静默。</p>}
+                              </>
+                            ) : slice.is_silent ? "此响应未计算记谱音观察；无已支持的持续音。" : (
                               <ul className="timeline-sources">
+                                <li>此响应未计算记谱音观察（旧版本）；下列仅为原有持续事件。</li>
                                 {slice.active_event_ids.map((id) => {
                                   const event = events.get(id);
                                   if (!event) return <li key={id}>来源缺失：{id}</li>;

@@ -227,7 +227,7 @@ def _normalize_part(part: ET.Element, pi: int, ids: list[str | None],
                 visual_types = set(visual)
                 if visual_types == {"continue"}:
                     visual_types = {"start", "stop"}
-                tie_safe = (len(ties) == len(set(ties)) and set(ties) <= {"start", "continue", "stop"}
+                tie_safe = (len(ties) == len(set(ties)) and set(ties) <= {"start", "stop"}
                             and len(visual) == len(set(visual)))
                 if visual and visual_types != set(ties):
                     tie_safe = False
