@@ -1,7 +1,7 @@
 "use client";
 
 import { ChangeEvent, FormEvent, useRef, useState } from "react";
-import { REVIEW_CATEGORIES, REVIEW_STATUSES, submitReviewRecord, type ReviewCategory, type ReviewRecord, type ReviewScope, type ReviewStatus } from "./reviewRecords";
+import { nextFlaggedReviewMeasure, REVIEW_CATEGORIES, REVIEW_STATUSES, submitReviewRecord, summarizeReviewMeasures, type ReviewCategory, type ReviewRecord, type ReviewScope, type ReviewStatus } from "./reviewRecords";
 
 const STATUS_LABELS: Record<ReviewStatus, string> = { correct: "正确", needs_review: "存疑", wrong: "错误" };
 const CATEGORY_LABELS: Record<ReviewCategory, string> = {
@@ -10,10 +10,11 @@ const CATEGORY_LABELS: Record<ReviewCategory, string> = {
   note_role: "音符角色", other: "其他",
 };
 
-export default function ExpertReview({ scope, selectedMeasureIndex, records, onSave, onDelete, onImport, onExport, pendingImportCount, onConfirmImport, onCancelImport, message }: {
+export default function ExpertReview({ scope, selectedMeasureIndex, records, onSelectMeasureIndex, onSave, onDelete, onImport, onExport, pendingImportCount, onConfirmImport, onCancelImport, message }: {
   scope: ReviewScope | null;
   selectedMeasureIndex: number | null;
   records: ReviewRecord[];
+  onSelectMeasureIndex: (index: number) => void;
   onSave: (record: ReviewRecord) => boolean;
   onDelete: (id: string) => void;
   onImport: (file: File) => Promise<void>;
@@ -34,6 +35,9 @@ export default function ExpertReview({ scope, selectedMeasureIndex, records, onS
   const sourceIds = [...(scope?.measure_sources.get(selectedMeasureIndex ?? -1) ?? [])].sort();
   const selectedRecords = records.filter((record) => record.measure_index === selectedMeasureIndex);
   const canReview = !!scope && selectedMeasureIndex !== null && scope.measure_sources.has(selectedMeasureIndex);
+  const summaries = scope ? summarizeReviewMeasures(scope, records) : [];
+  const currentSummary = summaries.find((summary) => summary.measure_index === selectedMeasureIndex);
+  const nextFlaggedIndex = nextFlaggedReviewMeasure(summaries, selectedMeasureIndex);
 
   function resetForm() {
     pendingId.current = null;
@@ -96,6 +100,27 @@ export default function ExpertReview({ scope, selectedMeasureIndex, records, onS
             <button type="button" className="secondary-button" onClick={onExport}>导出校审 JSON</button>
             <label className="review-import">导入校审 JSON <input type="file" accept=".json,application/json" onChange={(event) => void importFile(event)} /></label>
           </div>
+          <div className="review-triage" aria-label="人工校审小节导航">
+            <p className="panel-note">仅汇总人工校审记录；每条意见分别计数，不代表机器结论。按书面小节顺序跳转。</p>
+            <div className="review-actions">
+              <label>有记录的小节
+                <select value="" onChange={(event) => { if (event.target.value) onSelectMeasureIndex(Number(event.target.value)); }}>
+                  <option value="">选择书面小节</option>
+                  {summaries.map((summary) => (
+                    <option key={summary.measure_index} value={summary.measure_index}>
+                      书面第 {summary.measure_index} 小节 · 正确 {summary.correct} · 存疑 {summary.needs_review} · 错误 {summary.wrong}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <button type="button" className="secondary-button" disabled={nextFlaggedIndex === null}
+                onClick={() => { if (nextFlaggedIndex !== null) onSelectMeasureIndex(nextFlaggedIndex); }}>
+                下一处存疑／错误
+              </button>
+            </div>
+            {summaries.length === 0 && <p role="status">尚无人工校审记录。</p>}
+            {summaries.length > 0 && nextFlaggedIndex === null && <p role="status">当前记录没有存疑或错误标记。</p>}
+          </div>
           {pendingImportCount !== null && (
             <div className="timeline-caution" role="status">
               导入已校验：{pendingImportCount} 条记录。确认后将替换当前文件全部 {records.length} 条人工校审记录。
@@ -105,6 +130,7 @@ export default function ExpertReview({ scope, selectedMeasureIndex, records, onS
           {selectedMeasureIndex !== null && canReview ? (
             <>
               <h4>书面第 {selectedMeasureIndex} 小节 · {selectedRecords.length} 条</h4>
+              <p className="panel-note">人工记录：正确 {currentSummary?.correct ?? 0} · 存疑 {currentSummary?.needs_review ?? 0} · 错误 {currentSummary?.wrong ?? 0}</p>
               {selectedRecords.length === 0 && <p>本小节暂无人工校审记录。</p>}
               <ul className="review-records">
                 {selectedRecords.map((record) => (
