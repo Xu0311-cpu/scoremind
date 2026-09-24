@@ -64,7 +64,15 @@ export function reviewScopeFromTimeline(
 }
 
 const MAX_RECORDS = 5000;
-const MAX_IMPORT_BYTES = 1024 * 1024;
+export const MAX_REVIEW_BYTES = 1024 * 1024;
+
+function byteLength(text: string): number {
+  return new TextEncoder().encode(text).length;
+}
+
+function assertReviewSize(text: string): void {
+  if (byteLength(text) > MAX_REVIEW_BYTES) throw new Error("校审 JSON 超过 1 MB 上限。");
+}
 
 function objectWithKeys(value: unknown, keys: string[]): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value)
@@ -113,17 +121,25 @@ export function validateReviewPackage(value: unknown, scope: ReviewScope): Revie
 }
 
 export function parseReviewPackage(text: string, scope: ReviewScope): ReviewPackage {
-  if (new TextEncoder().encode(text).length > MAX_IMPORT_BYTES) throw new Error("校审 JSON 超过 1 MB 上限。");
+  assertReviewSize(text);
   let value: unknown;
   try { value = JSON.parse(text); } catch { throw new Error("校审文件不是有效 JSON。"); }
-  return validateReviewPackage(value, scope);
+  const reviewPackage = validateReviewPackage(value, scope);
+  assertReviewSize(JSON.stringify(reviewPackage));
+  return reviewPackage;
 }
 
 export function createReviewPackage(scope: ReviewScope, records: ReviewRecord[]): ReviewPackage {
-  return validateReviewPackage({
+  const reviewPackage = validateReviewPackage({
     format: REVIEW_FORMAT, format_version: REVIEW_FORMAT_VERSION,
     file_sha256: scope.file_sha256, analysis_version: scope.analysis_version, records,
   }, scope);
+  assertReviewSize(JSON.stringify(reviewPackage));
+  return reviewPackage;
+}
+
+export function serializeReviewPackage(scope: ReviewScope, records: ReviewRecord[]): string {
+  return JSON.stringify(createReviewPackage(scope, records));
 }
 
 export function upsertReviewRecord(scope: ReviewScope, records: ReviewRecord[], record: ReviewRecord): ReviewRecord[] {
@@ -131,6 +147,12 @@ export function upsertReviewRecord(scope: ReviewScope, records: ReviewRecord[], 
     ? records.map((existing) => existing.id === record.id ? record : existing)
     : [...records, record];
   return createReviewPackage(scope, next).records;
+}
+
+export function submitReviewRecord(record: ReviewRecord, save: (record: ReviewRecord) => boolean, onAccepted: () => void): boolean {
+  const accepted = save(record);
+  if (accepted) onAccepted();
+  return accepted;
 }
 
 export function deleteReviewRecord(scope: ReviewScope, records: ReviewRecord[], id: string): ReviewRecord[] {
@@ -147,5 +169,5 @@ export function readReviewDraft(storage: Storage, scope: ReviewScope): ReviewRec
 }
 
 export function writeReviewDraft(storage: Storage, scope: ReviewScope, records: ReviewRecord[]): void {
-  storage.setItem(reviewStorageKey(scope), JSON.stringify(createReviewPackage(scope, records)));
+  storage.setItem(reviewStorageKey(scope), serializeReviewPackage(scope, records));
 }

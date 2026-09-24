@@ -1,7 +1,7 @@
 "use client";
 
-import { ChangeEvent, FormEvent, useState } from "react";
-import { REVIEW_CATEGORIES, REVIEW_STATUSES, type ReviewCategory, type ReviewRecord, type ReviewScope, type ReviewStatus } from "./reviewRecords";
+import { ChangeEvent, FormEvent, useRef, useState } from "react";
+import { REVIEW_CATEGORIES, REVIEW_STATUSES, submitReviewRecord, type ReviewCategory, type ReviewRecord, type ReviewScope, type ReviewStatus } from "./reviewRecords";
 
 const STATUS_LABELS: Record<ReviewStatus, string> = { correct: "正确", needs_review: "存疑", wrong: "错误" };
 const CATEGORY_LABELS: Record<ReviewCategory, string> = {
@@ -14,7 +14,7 @@ export default function ExpertReview({ scope, selectedMeasureIndex, records, onS
   scope: ReviewScope | null;
   selectedMeasureIndex: number | null;
   records: ReviewRecord[];
-  onSave: (record: ReviewRecord) => void;
+  onSave: (record: ReviewRecord) => boolean;
   onDelete: (id: string) => void;
   onImport: (file: File) => Promise<void>;
   onExport: () => void;
@@ -30,11 +30,13 @@ export default function ExpertReview({ scope, selectedMeasureIndex, records, onS
   const [suggestedResult, setSuggestedResult] = useState("");
   const [rationale, setRationale] = useState("");
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const pendingId = useRef<string | null>(null);
   const sourceIds = [...(scope?.measure_sources.get(selectedMeasureIndex ?? -1) ?? [])].sort();
   const selectedRecords = records.filter((record) => record.measure_index === selectedMeasureIndex);
   const canReview = !!scope && selectedMeasureIndex !== null && scope.measure_sources.has(selectedMeasureIndex);
 
   function resetForm() {
+    pendingId.current = null;
     setEditing(null);
     setStatus("needs_review");
     setCategory("other");
@@ -44,6 +46,7 @@ export default function ExpertReview({ scope, selectedMeasureIndex, records, onS
   }
 
   function edit(record: ReviewRecord) {
+    pendingId.current = null;
     setEditing(record);
     setStatus(record.status);
     setCategory(record.category);
@@ -56,8 +59,9 @@ export default function ExpertReview({ scope, selectedMeasureIndex, records, onS
     event.preventDefault();
     if (!canReview || selectedMeasureIndex === null) return;
     const now = new Date().toISOString();
-    onSave({
-      id: editing?.id ?? crypto.randomUUID(),
+    if (!editing && !pendingId.current) pendingId.current = crypto.randomUUID();
+    submitReviewRecord({
+      id: editing?.id ?? pendingId.current!,
       measure_index: selectedMeasureIndex,
       source_note_id: sourceId || null,
       status, category,
@@ -65,8 +69,7 @@ export default function ExpertReview({ scope, selectedMeasureIndex, records, onS
       rationale: rationale.trim(),
       created_at: editing?.created_at ?? now,
       updated_at: now,
-    });
-    resetForm();
+    }, onSave, resetForm);
   }
 
   async function importFile(event: ChangeEvent<HTMLInputElement>) {

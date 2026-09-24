@@ -8,7 +8,7 @@ const source = fs.readFileSync(path.join(__dirname, "../app/reviewRecords.ts"), 
 const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
 const mod = { exports: {} };
 new Function("module", "exports", compiled)(mod, mod.exports);
-const { createReviewPackage, deleteReviewRecord, parseReviewPackage, readReviewDraft, reviewScopeFromTimeline, reviewStorageKey, upsertReviewRecord, writeReviewDraft } = mod.exports;
+const { MAX_REVIEW_BYTES, createReviewPackage, deleteReviewRecord, parseReviewPackage, readReviewDraft, reviewScopeFromTimeline, reviewStorageKey, serializeReviewPackage, submitReviewRecord, upsertReviewRecord, writeReviewDraft } = mod.exports;
 
 const sha = "a".repeat(64);
 const otherSha = "b".repeat(64);
@@ -86,4 +86,45 @@ test("blocked or corrupt browser storage never becomes valid review data", () =>
   const storage = fakeStorage();
   storage.setItem(reviewStorageKey(scope), "not json");
   assert.throws(() => readReviewDraft(storage, scope), /JSON/);
+});
+
+test("saved review JSON always round-trips through export, reload and import under the shared byte limit", () => {
+  const records = Array.from({ length: 400 }, (_, index) => ({ ...record, id: `review-${index}`, rationale: "字".repeat(500) }));
+  const exported = serializeReviewPackage(scope, records);
+  assert.ok(Buffer.byteLength(exported, "utf8") <= MAX_REVIEW_BYTES);
+  const storage = fakeStorage();
+  writeReviewDraft(storage, scope, records);
+  assert.equal(storage.getItem(reviewStorageKey(scope)), exported);
+  assert.deepEqual(readReviewDraft(storage, scope), records);
+  assert.deepEqual(parseReviewPackage(exported, scope).records, records);
+});
+
+test("oversize records cannot enter memory, overwrite a draft or produce an unimportable export", () => {
+  const storage = fakeStorage();
+  writeReviewDraft(storage, scope, [record]);
+  const before = storage.getItem(reviewStorageKey(scope));
+  const oversized = Array.from({ length: 500 }, (_, index) => ({ ...record, id: `review-${index}`, rationale: "x".repeat(2000) }));
+  assert.ok(Buffer.byteLength(JSON.stringify({ ...createReviewPackage(scope, []), records: oversized }), "utf8") > MAX_REVIEW_BYTES);
+  assert.throws(() => createReviewPackage(scope, oversized), /1 MB/);
+  assert.throws(() => serializeReviewPackage(scope, oversized), /1 MB/);
+  assert.throws(() => writeReviewDraft(storage, scope, oversized), /1 MB/);
+  assert.throws(() => upsertReviewRecord(scope, oversized.slice(0, -1), oversized.at(-1)), /1 MB/);
+  assert.equal(storage.getItem(reviewStorageKey(scope)), before);
+  assert.deepEqual(readReviewDraft(storage, scope), [record]);
+});
+
+test("a rejected save leaves the form draft intact and never invokes reset", () => {
+  const draft = { ...record, rationale: "   " };
+  let resetCalls = 0;
+  let records = [record];
+  const accepted = submitReviewRecord(draft, (candidate) => {
+    try { records = upsertReviewRecord(scope, records, candidate); return true; }
+    catch { return false; }
+  }, () => { resetCalls += 1; });
+  assert.equal(accepted, false);
+  assert.equal(resetCalls, 0);
+  assert.equal(draft.rationale, "   ");
+  assert.deepEqual(records, [record]);
+  assert.equal(submitReviewRecord({ ...record, rationale: "已核实" }, () => true, () => { resetCalls += 1; }), true);
+  assert.equal(resetCalls, 1);
 });

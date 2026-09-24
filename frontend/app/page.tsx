@@ -5,7 +5,7 @@ import NotatedTimeline, { type NotatedTimelineData } from "./NotatedTimeline";
 import ScorePreview from "./ScorePreview";
 import WrittenMeasureNavigator from "./WrittenMeasureNavigator";
 import ExpertReview from "./ExpertReview";
-import { createReviewPackage, deleteReviewRecord, parseReviewPackage, readReviewDraft, reviewScopeFromTimeline, upsertReviewRecord, writeReviewDraft, type ReviewRecord, type ReviewScope } from "./reviewRecords";
+import { MAX_REVIEW_BYTES, deleteReviewRecord, parseReviewPackage, readReviewDraft, reviewScopeFromTimeline, serializeReviewPackage, upsertReviewRecord, writeReviewDraft, type ReviewRecord, type ReviewScope } from "./reviewRecords";
 import { initialMeasureIndex, writtenMeasureOptions } from "./scoreMeasureNavigation";
 
 type KeyAnalysis = {
@@ -523,21 +523,27 @@ export default function Home() {
     setCopyMessage(null);
   }
 
-  function persistReviews(next: ReviewRecord[]) {
-    if (!reviewScope) return;
+  function persistReviews(next: ReviewRecord[]): boolean {
+    if (!reviewScope) return false;
     setReviewRecords(next);
     try {
       writeReviewDraft(window.localStorage, reviewScope, next);
       setReviewMessage("校审草稿已保存到此浏览器；不是云同步。请导出 JSON 备份。");
+      return true;
     } catch {
       setReviewMessage("浏览器本地存储不可用或容量不足；记录暂存于当前页面，刷新后可能丢失。请立即导出 JSON。");
+      return false;
     }
   }
 
-  function saveReview(record: ReviewRecord) {
-    if (!reviewScope) return;
-    try { persistReviews(upsertReviewRecord(reviewScope, reviewRecords, record)); }
-    catch (err) { setReviewMessage(err instanceof Error ? err.message : "校审记录无效。"); }
+  function saveReview(record: ReviewRecord): boolean {
+    if (!reviewScope) return false;
+    try {
+      return persistReviews(upsertReviewRecord(reviewScope, reviewRecords, record));
+    } catch (err) {
+      setReviewMessage(err instanceof Error ? err.message : "校审记录无效。");
+      return false;
+    }
   }
 
   function removeReview(id: string) {
@@ -548,7 +554,7 @@ export default function Home() {
     if (!reviewScope) return;
     const generation = analysisGenerationRef.current;
     try {
-      if (importFile.size > 1024 * 1024) throw new Error("校审 JSON 超过 1 MB 上限。");
+      if (importFile.size > MAX_REVIEW_BYTES) throw new Error("校审 JSON 超过 1 MB 上限。");
       const imported = parseReviewPackage(await importFile.text(), reviewScope);
       if (generation !== analysisGenerationRef.current) return;
       if (reviewRecords.length) {
@@ -567,7 +573,7 @@ export default function Home() {
 
   function exportReviews() {
     if (!reviewScope) return;
-    const contents = JSON.stringify(createReviewPackage(reviewScope, reviewRecords), null, 2);
+    const contents = serializeReviewPackage(reviewScope, reviewRecords);
     const url = URL.createObjectURL(new Blob([contents], { type: "application/json;charset=utf-8" }));
     const anchor = document.createElement("a");
     anchor.href = url;
