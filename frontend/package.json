@@ -1,11 +1,12 @@
 {
   "name": "music-score-understanding-frontend",
-  "version": "3.7.0",
+  "version": "3.8.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "test": "node --test tests/*.test.cjs"
   },
   "dependencies": {
     "next": "^15.0.0",

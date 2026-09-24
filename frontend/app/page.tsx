@@ -1,7 +1,10 @@
 "use client";
 
-import { ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { ChangeEvent, FormEvent, useMemo, useRef, useState } from "react";
 import NotatedTimeline, { type NotatedTimelineData } from "./NotatedTimeline";
+import ScorePreview from "./ScorePreview";
+import WrittenMeasureNavigator from "./WrittenMeasureNavigator";
+import { initialMeasureIndex, writtenMeasureOptions } from "./scoreMeasureNavigation";
 
 type KeyAnalysis = {
   tonic: string | null;
@@ -269,15 +272,17 @@ const TERMINOLOGY_GUIDE: TerminologyItem[] = [
 
 export default function Home() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const scoreContainerRef = useRef<HTMLDivElement | null>(null);
+  const fileGenerationRef = useRef(0);
+  const analysisGenerationRef = useRef(0);
+  const [fileRevision, setFileRevision] = useState(0);
   const [file, setFile] = useState<File | null>(null);
   const [musicXmlText, setMusicXmlText] = useState<string | null>(null);
   const [analysis, setAnalysis] = useState<MusicXMLAnalysisResponse | null>(null);
   const [explanation, setExplanation] = useState<ExplanationResponse | null>(null);
   const [loadingAnalysis, setLoadingAnalysis] = useState(false);
   const [loadingExplanation, setLoadingExplanation] = useState(false);
-  const [renderingScore, setRenderingScore] = useState(false);
-  const [scoreRenderError, setScoreRenderError] = useState<string | null>(null);
+  const [selectedMeasureIndex, setSelectedMeasureIndex] = useState<number | null>(null);
+  const [navigationToken, setNavigationToken] = useState(0);
   const [markdownReport, setMarkdownReport] = useState("");
   const [copyMessage, setCopyMessage] = useState<string | null>(null);
   const [noteRoleFilter, setNoteRoleFilter] = useState<NoteRoleFilter>("all");
@@ -339,58 +344,12 @@ export default function Home() {
   }, [analysis]);
 
   const selectedInputSource = INPUT_SOURCE_OPTIONS.find((option) => option.id === inputSource) ?? INPUT_SOURCE_OPTIONS[0];
+  const measureOptions = useMemo(() => writtenMeasureOptions(analysis?.notated_timeline), [analysis]);
 
-  useEffect(() => {
-    if (!musicXmlText || !scoreContainerRef.current) {
-      return;
-    }
-
-    let cancelled = false;
-    const xmlToRender = musicXmlText;
-
-    async function renderScore() {
-      const container = scoreContainerRef.current;
-      if (!container) {
-        return;
-      }
-
-      setRenderingScore(true);
-      setScoreRenderError(null);
-      container.innerHTML = "";
-
-      try {
-        const { OpenSheetMusicDisplay } = await import("opensheetmusicdisplay");
-        if (cancelled) {
-          return;
-        }
-
-        const osmd = new OpenSheetMusicDisplay(container, {
-          autoResize: true,
-          drawTitle: true,
-        });
-        await osmd.load(xmlToRender);
-        if (cancelled) {
-          return;
-        }
-        await osmd.render();
-      } catch {
-        if (!cancelled) {
-          container.innerHTML = "";
-          setScoreRenderError("Score preview could not be rendered, but analysis may still work. / 乐谱预览渲染失败，但分析可能仍可进行。");
-        }
-      } finally {
-        if (!cancelled) {
-          setRenderingScore(false);
-        }
-      }
-    }
-
-    void renderScore();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [musicXmlText]);
+  function selectWrittenMeasure(index: number) {
+    setSelectedMeasureIndex(index);
+    setNavigationToken((token) => token + 1);
+  }
 
   function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
     const selectedFile = event.target.files?.[0] ?? null;
@@ -400,9 +359,13 @@ export default function Home() {
       return;
     }
 
+    fileGenerationRef.current += 1;
+    analysisGenerationRef.current += 1;
+    setFileRevision(fileGenerationRef.current);
     setFile(selectedFile);
     setMusicXmlText(null);
-    setScoreRenderError(null);
+    setSelectedMeasureIndex(null);
+    setLoadingAnalysis(false);
     setAnalysis(null);
     setExplanation(null);
     setMarkdownReport("");
@@ -413,15 +376,16 @@ export default function Home() {
     setError(null);
 
     if (selectedFile) {
-      void loadMusicXmlText(selectedFile);
+      void loadMusicXmlText(selectedFile, fileGenerationRef.current);
     }
   }
 
-  async function loadMusicXmlText(selectedFile: File) {
+  async function loadMusicXmlText(selectedFile: File, generation: number) {
     try {
-      setMusicXmlText(await selectedFile.text());
+      const content = await selectedFile.text();
+      if (fileGenerationRef.current === generation) setMusicXmlText(content);
     } catch {
-      setScoreRenderError("Score preview could not be rendered, but analysis may still work. / 乐谱预览渲染失败，但分析可能仍可进行。");
+      if (fileGenerationRef.current === generation) setError("乐谱文件无法读取；后端分析仍可单独尝试。");
     }
   }
 
@@ -433,8 +397,11 @@ export default function Home() {
     }
 
     setLoadingAnalysis(true);
+    analysisGenerationRef.current += 1;
+    const generation = analysisGenerationRef.current;
     setError(null);
     setAnalysis(null);
+    setSelectedMeasureIndex(null);
     setExplanation(null);
     setMarkdownReport("");
     setCopyMessage(null);
@@ -453,11 +420,14 @@ export default function Home() {
         throw new Error(await getApiErrorMessage(response, "Analysis failed. Please check the file and try again. / 分析失败，请检查文件后重试。"));
       }
       const payload = await response.json();
-      setAnalysis(payload);
+      if (analysisGenerationRef.current === generation) {
+        setAnalysis(payload);
+        setSelectedMeasureIndex(initialMeasureIndex(payload.notated_timeline));
+      }
     } catch (err) {
-      setError(formatRequestError(err, "Analysis failed. Please check the file and try again. / 分析失败，请检查文件后重试。"));
+      if (analysisGenerationRef.current === generation) setError(formatRequestError(err, "Analysis failed. Please check the file and try again. / 分析失败，请检查文件后重试。"));
     } finally {
-      setLoadingAnalysis(false);
+      if (analysisGenerationRef.current === generation) setLoadingAnalysis(false);
     }
   }
 
@@ -497,6 +467,9 @@ export default function Home() {
   }
 
   function resetState() {
+    fileGenerationRef.current += 1;
+    analysisGenerationRef.current += 1;
+    setFileRevision(fileGenerationRef.current);
     setFile(null);
     setMusicXmlText(null);
     setAnalysis(null);
@@ -506,12 +479,9 @@ export default function Home() {
     setNoteRoleFilter("all");
     setNoteContextFilter("all");
     setAnalysisView("student");
-    setScoreRenderError(null);
-    setRenderingScore(false);
+    setSelectedMeasureIndex(null);
+    setLoadingAnalysis(false);
     setError(null);
-    if (scoreContainerRef.current) {
-      scoreContainerRef.current.innerHTML = "";
-    }
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -564,7 +534,7 @@ export default function Home() {
       <section className="workspace">
         <header className="page-header">
           <div>
-            <p className="eyebrow">MVP 3.7</p>
+            <p className="eyebrow">MVP 3.8</p>
             <h1>ScoreMind</h1>
             <p className="product-subtitle">AI Music Score Understanding</p>
           </div>
@@ -644,7 +614,7 @@ export default function Home() {
               ) : (
                 <div className="unsupported-source-note">
                   <p>
-                    This source is guidance-only in MVP 3.7. The runtime upload control still accepts only
+                    This source is guidance-only in MVP 3.8. The runtime upload control still accepts only
                     {" "}.musicxml and .xml files after you export or convert externally.
                   </p>
                 </div>
@@ -653,11 +623,10 @@ export default function Home() {
           </div>
 
           {file && (
-            <div className="score-preview-wrap">
-              {renderingScore && <p className="empty-state">Rendering score preview... / 正在渲染乐谱预览...</p>}
-              {scoreRenderError && <div className="inline-warning">{scoreRenderError}</div>}
-              <div ref={scoreContainerRef} className="score-preview" aria-label="Rendered MusicXML score preview" />
-            </div>
+            <>
+              {analysis && <WrittenMeasureNavigator options={measureOptions} selected={selectedMeasureIndex} onSelect={selectWrittenMeasure} label="乐谱预览书面小节导航" />}
+              <ScorePreview key={fileRevision} xml={musicXmlText} timeline={analysis?.notated_timeline} selectedMeasureIndex={selectedMeasureIndex} navigationToken={navigationToken} />
+            </>
           )}
         </section>
 
@@ -920,7 +889,7 @@ export default function Home() {
                 </section>
 
                 <h3>Technical Summary</h3>
-                <NotatedTimeline key={analysis.file_name} timeline={analysis.notated_timeline} />
+                <NotatedTimeline timeline={analysis.notated_timeline} selectedMeasureIndex={selectedMeasureIndex} onSelectMeasureIndex={selectWrittenMeasure} />
                 <dl className="summary-grid compact-grid">
                   <div>
                     <dt>File</dt>

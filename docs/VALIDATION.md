@@ -1,4 +1,16 @@
-# Validation Guide for MVP 3.7
+# Validation Guide for MVP 3.8
+
+## MVP 3.8 书面小节导航验证
+
+在 `backend/` 运行 `/opt/miniconda3/bin/python3 -m pytest`；在 `frontend/` 运行 `npm test` 与 `npm run build`。前端测试使用现有 TypeScript 编译器与 Node 内置测试运行器，不增加运行时或测试依赖。它检查弱起/重复标号仍为独立书面序号、多 part 网格、每个谱表图形来源匹配、前后边界、旧响应缺字段、`unsupported`、缺失谱面和不匹配图形时不返回高亮目标。
+
+浏览器端用真实 `backend/tests/fixtures/timeline_meter_tuplets.musicxml` 上传并 Analyze：下拉选项应为书面第 1/2/3 小节（标号 `0/1/1`），后两个同号小节分别高亮；在技术证据点“下一个”应滚回谱面并将两处选择同步。`timeline_staff_transpose.musicxml` 验证同一小节的两个谱表都被框出；`timeline_parts.musicxml` 验证两个 part 的两个谱表都框出。`timeline_ties.musicxml` 验证导航不丢失原有完整 tie 来源链。`timeline_misaligned_parts.musicxml` 预期 `unsupported`，不显示高亮，只显示不可定位原因。重选文件应移除旧选框和分析导航；重新分析从首个书面小节开始。将视口从 1280px 缩到 390px，应重新排版且保持当前选择；触控下一小节后等待平滑滚动完成，查看标框和页面横向溢出。谱面自身在较密排版时可能允许内部水平滚动，但页面不应横向溢出。
+
+本轮实测：Python 3.13 后端 90 项通过（既有 RequestsDependencyWarning 1 条）；前端导航单测 5 项通过，构建通过。1280px / 390px 浏览器中，meter_tuplets 3 个书面位置各绘制 4 条边框线；staff_transpose 与 parts 的每个选中位置均绘制 8 条边框线（各 2 个谱表）。桌面和窄屏切换后两处选择一致，页面 `document.documentElement.scrollWidth - innerWidth` 为 0。390px 下技术证据触控导航后，等待平滑滚动约 1 秒，谱面容器回到视口中；缩放重排仍保留高亮。文件替换后高亮与导航归零，重新分析回到首个小节；misaligned_parts 返回 `unsupported` 时高亮线数量为 0。浏览器用独立 Next 临时副本避免本机其他开发服务共享 `.next` 缓存，后端仅在临时测试服务允许测试端口跨域，仓库 CORS 配置未改变。
+
+OSMD 映射只用于书面小节可视定位。活动持续音集合仍不是和弦；旧 detected_chords、harmonic_context、音符角色、NCT 和学习报告不读取图形位置。失败状态应由文字明确说明，不能用显示小节号猜 SVG 元素。
+
+## MVP 3.7 历史验证
 
 ## MVP 3.7 记谱音观察验证
 
@@ -8,7 +20,7 @@
 
 复审回归：上传 `timeline_ties.musicxml`，在技术证据中选第 2 小节。C4 必须同时显示持续事件 `[0,12)`、当前片段 `p1:m2:n1` 和完整链 `p1:m1:n1 → p1:m2:n1 → p1:m3:n1`；展开链后可核对三段来源。把中间声音标签替换成非标准 `<tie type="continue"/>` 的 API 测试应保留 `tie: ["continue"]` 供审计，同时给出诊断、`tie_safe=false` 并拒绝合并。此用例在 390px 窄屏不应横向溢出。
 
-本地命令：在 `backend/` 运行 `/opt/miniconda3/bin/python3 -m pytest`，在 `frontend/` 运行 `npm run build`。本次本地 Python 3.13 下 90 项测试通过，前端构建通过；1280px 与 390px 页面核对无横向溢出。`.github/workflows/ci.yml` 在 push / PR 时执行 Python 3.11 后端测试和 Node 20 前端构建；本地通过不代表远端 CI 已运行。
+历史 3.7 命令：在 `backend/` 运行 `/opt/miniconda3/bin/python3 -m pytest`，在 `frontend/` 运行 `npm run build`。当时本地 Python 3.13 下 90 项测试通过，前端构建通过；1280px 与 390px 页面核对无横向溢出。当前 `.github/workflows/ci.yml` 在 push / PR 时执行 Python 3.11 后端测试及 Node 20 前端测试与构建；本地通过不代表远端 CI 已运行。
 
 ## MVP 3.6 时间轴验证
 
