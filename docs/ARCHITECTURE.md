@@ -93,6 +93,14 @@ OpenSheetMusicDisplay renders the uploaded MusicXML text in the browser. This pr
 
 小节选中序号由 `page.tsx` 持有，谱面上方导航与 `NotatedTimeline.tsx` 共用；更换文件或重新分析会清除旧选择，分析成功后默认选择首个书面小节。谱面宽度变化时重新渲染并复核图形位置。旧 JSON 没有时间轴、时间轴 `unsupported`、谱面未渲染、part 网格或 OSMD 映射不吻合时，显示不可定位原因并不绘制高亮；`partial` 只有来源与书面位置仍可验证时才允许定位。3.8 不改变任何后端乐理算法、时间轴算法、解释路径或上传格式。
 
+### MVP 3.9 独立人工校审记录
+
+`reviewRecords.ts` 定义独立 JSON 契约与严格校验，`ExpertReview.tsx` 提供当前书面小节的查看、编辑、删除和导入/导出。`page.tsx` 对上传文件**原始字节**计算 SHA-256；书面 `measure_index` 取已计算且非 `unsupported` 的 `notated_timeline.measures`，可选 `source_note_id` 必须属于该书面小节的来源集合。同号显示小节不会合并。无法计算指纹、旧分析 JSON 缺时间轴或时间轴不支持时，不提供可能误绑定的校审入口。
+
+校审包包含 `format`、`format_version`、`file_sha256`、`analysis_version` 和记录数组。导入严格检查字段、长度、状态、类别、重复 ID、指纹、分析版本及可回溯来源；错谱、跨版本或悬空来源直接拒绝。浏览器 `localStorage` 以指纹和分析版本为键保存草稿；禁用存储、隐私模式或配额不足时仅保留当前页面内存并提示导出。JSON 不存原始谱面内容，也不发送校审记录到后端。
+
+校审状态与机器分析 `analysis` 完全分离；解释请求和 Markdown Learning Report 仍只读取原有确定性分析。来源 ID 是同一文件版本内的符号化引用，**不是** OSMD 音符点击定位。当前只有单机浏览器草稿与手动 JSON 交接，没有账号、数据库、多人同步或自动纠错。
+
 ## Student View vs Technical Evidence
 
 Student Analysis is the default user-facing path. It includes:

@@ -4,6 +4,8 @@ import { ChangeEvent, FormEvent, useMemo, useRef, useState } from "react";
 import NotatedTimeline, { type NotatedTimelineData } from "./NotatedTimeline";
 import ScorePreview from "./ScorePreview";
 import WrittenMeasureNavigator from "./WrittenMeasureNavigator";
+import ExpertReview from "./ExpertReview";
+import { MAX_REVIEW_BYTES, deleteReviewRecord, parseReviewPackage, readReviewDraft, reviewScopeFromTimeline, serializeReviewPackage, upsertReviewRecord, writeReviewDraft, type ReviewRecord, type ReviewScope } from "./reviewRecords";
 import { initialMeasureIndex, writtenMeasureOptions } from "./scoreMeasureNavigation";
 
 type KeyAnalysis = {
@@ -290,6 +292,10 @@ export default function Home() {
   const [analysisView, setAnalysisView] = useState<AnalysisView>("student");
   const [inputSource, setInputSource] = useState<InputSourceId>("musicxml");
   const [error, setError] = useState<string | null>(null);
+  const [reviewScope, setReviewScope] = useState<ReviewScope | null>(null);
+  const [reviewRecords, setReviewRecords] = useState<ReviewRecord[]>([]);
+  const [reviewMessage, setReviewMessage] = useState<string | null>(null);
+  const [pendingReviewImport, setPendingReviewImport] = useState<ReviewRecord[] | null>(null);
 
   const detectedChordCount = useMemo(() => {
     if (!analysis) {
@@ -374,6 +380,10 @@ export default function Home() {
     setNoteContextFilter("all");
     setAnalysisView("student");
     setError(null);
+    setReviewScope(null);
+    setReviewRecords([]);
+    setReviewMessage(null);
+    setPendingReviewImport(null);
 
     if (selectedFile) {
       void loadMusicXmlText(selectedFile, fileGenerationRef.current);
@@ -408,8 +418,13 @@ export default function Home() {
     setNoteRoleFilter("all");
     setNoteContextFilter("all");
     setAnalysisView("student");
+    setReviewScope(null);
+    setReviewRecords([]);
+    setReviewMessage(null);
+    setPendingReviewImport(null);
 
     try {
+      const fingerprintPromise = fingerprintFile(file).catch(() => null);
       const formData = new FormData();
       formData.append("file", file);
       const response = await fetch(`${API_BASE_URL}/api/v1/analyze/musicxml`, {
@@ -420,9 +435,18 @@ export default function Home() {
         throw new Error(await getApiErrorMessage(response, "Analysis failed. Please check the file and try again. / 分析失败，请检查文件后重试。"));
       }
       const payload = await response.json();
+      const fingerprint = await fingerprintPromise;
       if (analysisGenerationRef.current === generation) {
         setAnalysis(payload);
         setSelectedMeasureIndex(initialMeasureIndex(payload.notated_timeline));
+        const scope = reviewScopeFromTimeline(fingerprint ?? "", payload.analysis_version, payload.notated_timeline);
+        setReviewScope(scope);
+        if (scope) {
+          try { setReviewRecords(readReviewDraft(window.localStorage, scope)); }
+          catch { setReviewMessage("浏览器本地草稿不可读取或格式无效；当前记录仅保留在此页面，可导出 JSON。隐私模式或禁用存储时刷新后可能丢失。"); }
+        } else if (!fingerprint) {
+          setReviewMessage("无法计算原始文件 SHA-256 指纹；分析仍可用，但校审功能已停用。");
+        }
       }
     } catch (err) {
       if (analysisGenerationRef.current === generation) setError(formatRequestError(err, "Analysis failed. Please check the file and try again. / 分析失败，请检查文件后重试。"));
@@ -482,6 +506,10 @@ export default function Home() {
     setSelectedMeasureIndex(null);
     setLoadingAnalysis(false);
     setError(null);
+    setReviewScope(null);
+    setReviewRecords([]);
+    setReviewMessage(null);
+    setPendingReviewImport(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -493,6 +521,67 @@ export default function Home() {
     }
     setMarkdownReport(generateMarkdownReport(analysis, explanation, measuresWithChords));
     setCopyMessage(null);
+  }
+
+  function persistReviews(next: ReviewRecord[]): boolean {
+    if (!reviewScope) return false;
+    setReviewRecords(next);
+    try {
+      writeReviewDraft(window.localStorage, reviewScope, next);
+      setReviewMessage("校审草稿已保存到此浏览器；不是云同步。请导出 JSON 备份。");
+      return true;
+    } catch {
+      setReviewMessage("浏览器本地存储不可用或容量不足；记录暂存于当前页面，刷新后可能丢失。请立即导出 JSON。");
+      return false;
+    }
+  }
+
+  function saveReview(record: ReviewRecord): boolean {
+    if (!reviewScope) return false;
+    try {
+      return persistReviews(upsertReviewRecord(reviewScope, reviewRecords, record));
+    } catch (err) {
+      setReviewMessage(err instanceof Error ? err.message : "校审记录无效。");
+      return false;
+    }
+  }
+
+  function removeReview(id: string) {
+    if (reviewScope) persistReviews(deleteReviewRecord(reviewScope, reviewRecords, id));
+  }
+
+  async function importReviews(importFile: File) {
+    if (!reviewScope) return;
+    const generation = analysisGenerationRef.current;
+    try {
+      if (importFile.size > MAX_REVIEW_BYTES) throw new Error("校审 JSON 超过 1 MB 上限。");
+      const imported = parseReviewPackage(await importFile.text(), reviewScope);
+      if (generation !== analysisGenerationRef.current) return;
+      if (reviewRecords.length) {
+        setPendingReviewImport(imported.records);
+        setReviewMessage(null);
+      } else persistReviews(imported.records);
+    } catch (err) {
+      if (generation === analysisGenerationRef.current) setReviewMessage(err instanceof Error ? err.message : "校审 JSON 导入失败。");
+    }
+  }
+
+  function confirmReviewImport() {
+    if (pendingReviewImport) persistReviews(pendingReviewImport);
+    setPendingReviewImport(null);
+  }
+
+  function exportReviews() {
+    if (!reviewScope) return;
+    const contents = serializeReviewPackage(reviewScope, reviewRecords);
+    const url = URL.createObjectURL(new Blob([contents], { type: "application/json;charset=utf-8" }));
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `scoremind-review-${reviewScope.file_sha256.slice(0, 12)}.json`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
   async function handleCopyReport() {
@@ -534,7 +623,7 @@ export default function Home() {
       <section className="workspace">
         <header className="page-header">
           <div>
-            <p className="eyebrow">MVP 3.8</p>
+            <p className="eyebrow">MVP 3.9</p>
             <h1>ScoreMind</h1>
             <p className="product-subtitle">AI Music Score Understanding</p>
           </div>
@@ -614,7 +703,7 @@ export default function Home() {
               ) : (
                 <div className="unsupported-source-note">
                   <p>
-                    This source is guidance-only in MVP 3.8. The runtime upload control still accepts only
+                    This source is guidance-only in MVP 3.9. The runtime upload control still accepts only
                     {" "}.musicxml and .xml files after you export or convert externally.
                   </p>
                 </div>
@@ -626,6 +715,7 @@ export default function Home() {
             <>
               {analysis && <WrittenMeasureNavigator options={measureOptions} selected={selectedMeasureIndex} onSelect={selectWrittenMeasure} label="乐谱预览书面小节导航" />}
               <ScorePreview key={fileRevision} xml={musicXmlText} timeline={analysis?.notated_timeline} selectedMeasureIndex={selectedMeasureIndex} navigationToken={navigationToken} />
+              {analysis && <ExpertReview key={`${reviewScope?.file_sha256 ?? "unavailable"}:${selectedMeasureIndex}`} scope={reviewScope} selectedMeasureIndex={selectedMeasureIndex} records={reviewRecords} onSave={saveReview} onDelete={removeReview} onImport={importReviews} onExport={exportReviews} pendingImportCount={pendingReviewImport?.length ?? null} onConfirmImport={confirmReviewImport} onCancelImport={() => setPendingReviewImport(null)} message={reviewMessage} />}
             </>
           )}
         </section>
@@ -890,6 +980,7 @@ export default function Home() {
 
                 <h3>Technical Summary</h3>
                 <NotatedTimeline timeline={analysis.notated_timeline} selectedMeasureIndex={selectedMeasureIndex} onSelectMeasureIndex={selectWrittenMeasure} />
+                <p className="panel-note">人工校审记录与上述机器证据分离。<a href="#expert-review">查看或编辑当前书面小节的校审记录</a>。</p>
                 <dl className="summary-grid compact-grid">
                   <div>
                     <dt>File</dt>
@@ -1216,6 +1307,11 @@ function NoteSummaryGrid({ summary }: { summary: NoteSummary }) {
       </div>
     </dl>
   );
+}
+
+async function fingerprintFile(file: File): Promise<string> {
+  const digest = await crypto.subtle.digest("SHA-256", await file.arrayBuffer());
+  return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
 function isSupportedFile(fileName: string) {

@@ -60,7 +60,7 @@ class ChordEvidence(BaseModel):
 class NonChordToneCandidate(BaseModel):
     kind: NonChordToneCandidateKind = Field(description="Conservative non-chord tone candidate kind.")
     confidence: NonChordToneCandidateConfidence = Field(
-        default="low", description="Confidence level. Never high in MVP 3.8."
+        default="low", description="Confidence level. Never high in MVP 3.9."
     )
     reason: str = Field(description="Human-readable reason for the candidate label.")
     limitations: list[str] = Field(description="Known limitations of this candidate classification.")
