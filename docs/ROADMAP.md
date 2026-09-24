@@ -1,9 +1,10 @@
 # Roadmap
 
-This roadmap describes future work. Items listed here are not current MVP 3.8 capabilities unless explicitly implemented elsewhere.
+This roadmap describes future work. Items listed here are not current MVP 3.9 capabilities unless explicitly implemented elsewhere.
 
 ## Current / Completed
 
+- MVP 3.9: 独立的专业人工校审记录、原始文件 SHA-256 绑定、按书面小节及可选来源 ID 校验、浏览器草稿和 JSON 导入/导出；不改写机器结论或学习报告。
 - MVP 3.8: 基于 OSMD 已验证书面序号的谱面与技术证据小节联动、前后导航、多谱表细框、不可定位回退与桌面/窄屏验证；不是音符级点击或新增和声结论。
 - MVP 3.7: 可审计的逐片记谱音观察、新起音/延续音来源、保守最低记谱音比较、技术证据展示与最小 CI；旧和声分析不使用观察字段。
 - MVP 3.6: 独立记谱时值时间轴、严格延音线基础、精确分数时间、逐音来源和可定位诊断；技术证据按小节查看。
@@ -38,11 +39,11 @@ This roadmap describes future work. Items listed here are not current MVP 3.8 ca
 
 - Add PDF/image/OMR pipeline.
 - Add optional LLM explanation provider that only explains deterministic analysis output.
-- Add human validation workflow for quality review and dataset building.
+- Evaluate a future shared human validation workflow and curated dataset process; current 3.9 review is local-only and does not synchronize.
 - Explore note-level score linkage only after reliable source-to-graphic mapping is validated; current linkage is measure-level only.
 - Add broader repertoire support.
 - Add deployment packaging for demos.
 
 ## Current Boundary
 
-The current system is MusicXML/XML only. MVP 3.8 retains conservative non-chord tone candidate hints (possible passing tone, possible neighbor tone) for student learning, but the runtime app still does not perform OMR, PDF/image upload, MIDI/audio analysis, local modulation, full classical non-chord tone classification, full sustained harmony inference, melody analysis, voice-leading analysis, or jazz/modern harmony analysis. Time-slice pitch observations are not harmony classifications.
+The current score input is MusicXML/XML only. MVP 3.9 adds separate human review JSON, not new score input or analysis. Conservative non-chord tone candidate hints remain learning aids; the runtime app still does not perform OMR, PDF/image upload, MIDI/audio analysis, local modulation, full classical non-chord tone classification, full sustained harmony inference, melody analysis, voice-leading analysis, or jazz/modern harmony analysis. Time-slice pitch observations are not harmony classifications.

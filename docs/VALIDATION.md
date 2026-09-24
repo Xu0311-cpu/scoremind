@@ -1,4 +1,14 @@
-# Validation Guide for MVP 3.8
+# Validation Guide for MVP 3.9
+
+## MVP 3.9 人工校审验证
+
+在 `backend/` 运行 `/opt/miniconda3/bin/python3 -m pytest`；在 `frontend/` 运行 `npm test` 和 `npm run build`。校审数据契约测试检查：增删改、相同文件指纹及分析版本下的浏览器草稿重载、不同指纹隔离、错谱/跨版本/无效书面小节/悬空来源/重复 ID/异常 JSON 拒绝、旧分析无时间轴时禁用，以及存储被拒绝或配额耗尽时保留可导出的内存记录。
+
+浏览器手动步骤：上传 `timeline_meter_tuplets.musicxml` 并 Analyze，按书面序号选择两个显示标号同为 `1` 的小节，分别添加整小节校审；选择 `timeline_ties.musicxml` 时可选 `p1:m2:n1` 来源 ID，记录依据、编辑状态并删除一条。导出 JSON 后刷新页面、重新上传**同一字节文件**并分析，确认本地草稿恢复；用导出的 JSON 替换/恢复记录。换成其他 MusicXML，旧记录不得出现；导入原文件 JSON 必须因 SHA-256 不匹配而拒绝。将 JSON 中的来源 ID 改为其他小节或不存在的 ID、分析版本改为旧版本，均应拒绝且保留现有记录。
+
+在 390px 宽度触控切换小节、打开来源选择、编辑和删除，确认状态与谱面/技术证据导航一致且页面无横向溢出。将很长的无空格依据或 `<img src=x onerror=alert(1)>` 作为文字输入并导入，必须换行且仅显示文本，不执行 HTML。禁用浏览器本地存储或模拟容量不足时，页面应明确提示当前记录仍在内存中、刷新可能丢失，并可立即导出 JSON。旧分析响应缺 `notated_timeline` 时应显示校审不可用而不猜测来源。人工记录不得出现在分析 API、解释请求或 Markdown 学习报告中。
+
+本地验收记录：Python 3.13 后端 90 项通过（环境已有 RequestsDependencyWarning），前端 11 项单测及 `npm run build` 通过。内置浏览器使用真实 `timeline_meter_tuplets.musicxml` 完成上传、分析、新增、编辑、同号书面小节隔离、刷新后重新上传恢复、换成 `timeline_ties.musicxml` 后 0 条、错谱 JSON 导入拒绝；报告文本不含人工依据。390px 与 1280px 视口页面横向溢出均为 0，390px 下小节按钮可点击。包含 HTML 标签的长依据以文本显示，未插入 `<img>`。当前内置浏览器没有上报 blob 下载事件，且后续文件选择事件超时；改为内联确认后的删除、导入覆盖、实际下载落盘及真实触屏硬件手势仍需独立复审时在常规浏览器复验，不能把 390px 鼠标点击称为真实触屏测试。
 
 ## MVP 3.8 书面小节导航验证
 
