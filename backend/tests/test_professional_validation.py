@@ -95,7 +95,14 @@ def test_k80_part_separation_rests_and_grace_are_reported_conservatively():
     timeline = result["notated_timeline"]
     assert len(result["measures"]) == 8
     assert timeline["status"] == "partial"
-    assert "grace_note_no_duration" in {item["code"] for item in timeline["diagnostics"]}
+    assert {
+        (item["measure_ids"][0], item["source_note_ids"][0])
+        for item in timeline["diagnostics"] if item["code"] == "grace_note_no_duration"
+    } == {
+        ("p1:m2", "p1:m2:n1"),
+        ("p1:m4", "p1:m4:n1"),
+        ("p3:m4", "p3:m4:n1"),
+    }
     assert not any(note["note_id"].startswith(("p2:m1:", "p2:m2:")) for note in timeline["source_notes"])
     chains = event_sources(timeline)
     assert ("p2:m3:n1", "p2:m4:n1") in chains
