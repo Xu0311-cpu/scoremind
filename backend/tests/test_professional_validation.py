@@ -46,8 +46,8 @@ def test_fur_elise_pickup_and_staggered_notes_are_source_facts():
     assert [measure.get("number") for measure in part.findall("measure")] == [str(n) for n in range(8)]
     opening = part.find("measure")
     assert opening is not None
-    assert [(note.findtext("pitch/step"), note.findtext("pitch/octave"))
-            for note in opening.findall("note")[:2]] == [("E", "5"), ("D", "5")]
+    assert [(note.findtext("pitch/step"), note.findtext("pitch/alter"), note.findtext("pitch/octave"))
+            for note in opening.findall("note")[:2]] == [("E", None, "5"), ("D", "1", "5")]
     assert [note.findtext("staff") for note in opening.findall("note")[:2]] == ["1", "1"]
     assert opening.findall("note")[2].find("rest") is not None
 
@@ -56,6 +56,9 @@ def test_fur_elise_pickup_and_staggered_notes_are_source_facts():
     assert timeline["status"] == "complete"
     assert [(measure["measure_index"], measure["measure_number"])
             for measure in result["measures"]] == [(index + 1, index) for index in range(8)]
+    source_pitches = {note["note_id"]: note["pitch"] for note in timeline["source_notes"]}
+    assert source_pitches["p1:m1:n1"] == "E5"
+    assert source_pitches["p1:m1:n2"] == "D#5"
     events = {event["source_note_ids"][0]: event for event in timeline["sustained_events"]}
     assert events["p1:m1:n1"]["end"] == events["p1:m1:n2"]["start"]
     assert events["p1:m1:n1"]["event_id"] != events["p1:m1:n2"]["event_id"]
