@@ -1,9 +1,10 @@
 # Roadmap
 
-This roadmap describes future work. Items listed here are not current MVP 3.9 capabilities unless explicitly implemented elsewhere.
+This roadmap describes future work. Items listed here are not current MVP 3.10 capabilities unless explicitly implemented elsewhere.
 
 ## Current / Completed
 
+- MVP 3.10: 三份明确 CC0 可再分发的真实短谱例、先于程序输出固定的结构性预期及 API 回归；人工校审按书面小节分别计数和跳转到下一处存疑/错误。复杂和声仍待独立专业校审，不报告总体准确率。
 - MVP 3.9: 独立的专业人工校审记录、原始文件 SHA-256 绑定、按书面小节及可选来源 ID 校验、浏览器草稿和 JSON 导入/导出；不改写机器结论或学习报告。
 - MVP 3.8: 基于 OSMD 已验证书面序号的谱面与技术证据小节联动、前后导航、多谱表细框、不可定位回退与桌面/窄屏验证；不是音符级点击或新增和声结论。
 - MVP 3.7: 可审计的逐片记谱音观察、新起音/延续音来源、保守最低记谱音比较、技术证据展示与最小 CI；旧和声分析不使用观察字段。
@@ -22,7 +23,8 @@ This roadmap describes future work. Items listed here are not current MVP 3.9 ca
 - Improve visual polish and responsive layout.
 - Improve Measure Walkthrough readability.
 - Add clearer empty states and demo hints.
-- Add more small validation fixtures.
+- Extend the licensed repertoire validation set only after provenance and independent expectations are recorded.
+- Have a qualified music reviewer annotate ambiguous harmony in the current short excerpts before calculating any accuracy metric.
 - Add screenshot-based demo documentation.
 - Run isolated OMR feasibility experiments outside the production app.
 
@@ -46,4 +48,4 @@ This roadmap describes future work. Items listed here are not current MVP 3.9 ca
 
 ## Current Boundary
 
-The current score input is MusicXML/XML only. MVP 3.9 adds separate human review JSON, not new score input or analysis. Conservative non-chord tone candidate hints remain learning aids; the runtime app still does not perform OMR, PDF/image upload, MIDI/audio analysis, local modulation, full classical non-chord tone classification, full sustained harmony inference, melody analysis, voice-leading analysis, or jazz/modern harmony analysis. Time-slice pitch observations are not harmony classifications.
+The current score input is MusicXML/XML only. MVP 3.10 adds separate human review triage and a small CC0 validation set, not new score input or analysis. Conservative non-chord tone candidate hints remain learning aids; the runtime app still does not perform OMR, PDF/image upload, MIDI/audio analysis, local modulation, full classical non-chord tone classification, full sustained harmony inference, melody analysis, voice-leading analysis, or jazz/modern harmony analysis. Time-slice pitch observations are not harmony classifications.

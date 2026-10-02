@@ -1,8 +1,10 @@
-# ScoreMind — AI Music Score Understanding (MVP 3.9)
+# ScoreMind — AI Music Score Understanding (MVP 3.10)
 
 ScoreMind is a deterministic MusicXML score understanding tool for music students. It parses symbolic score data, analyzes basic harmony and note-level chord membership, renders a score preview, and turns the result into student-friendly learning views.
 
-Current release: MVP 3.9. Current score uploads remain limited to `.musicxml` and `.xml`.
+Current release: MVP 3.10. Current score uploads remain limited to `.musicxml` and `.xml`.
+
+MVP 3.10 adds three short, redistributable CC0 repertoire excerpts with independently recorded **structural** expectations, plus a compact human-review triage view. Reviewers can see separate counts of correct/uncertain/wrong opinions per **written measure index** and jump to the next flagged measure. These counts come only from human records; they do not alter machine analysis or become a consensus label. Complex harmonic judgments remain marked unclear until independently reviewed. See [real-score validation and provenance](docs/PROFESSIONAL_VALIDATION.md).
 
 MVP 3.9 adds a separate **professional human review record** beside written-measure navigation. A reviewer can mark a written measure or one of its source note IDs as correct, uncertain, or wrong; record a category, suggested result, and rationale; edit or delete entries; and export/import a strictly validated JSON review package. The package is tied to SHA-256 of the original uploaded file and the analysis version; compact UTF-8 JSON is capped at 1 MiB across save, export, and import. Browser-local drafts are not cloud sync and may be unavailable in private mode or when storage is full. Review data never changes the deterministic API response, confidence labels, explanation request, or Markdown Learning Report.
 
@@ -41,6 +43,7 @@ ScoreMind is not a chatbot. It is a structured score-understanding prototype bui
 - Render a MusicXML score preview.
 - Navigate from Technical Evidence to the matching written score measure, with a visible staff-level outline when mapping is verified.
 - Record separate, file-bound human review notes by written measure and optional source note ID; export/import them as JSON.
+- Inspect per-written-measure counts of human review opinions and jump between uncertain/wrong measures without changing machine results.
 - Inspect written-duration slices and safe tie chains with traceable note sources in Technical Evidence.
 - Detect basic triads and seventh chords.
 - Estimate global key and conservative Roman numerals.
@@ -109,6 +112,7 @@ ScoreMind demonstrates an AI product architecture where domain reasoning is dete
 - `docs/ARCHITECTURE.md`: backend/frontend architecture and deterministic analysis boundary.
 - `docs/ROADMAP.md`: future work, clearly separated from current capability.
 - `docs/VALIDATION.md`: validation process for current fixtures.
+- `docs/PROFESSIONAL_VALIDATION.md`: CC0 repertoire excerpt provenance, fixed structural expectations, observed results, and remaining review work.
 - `docs/RELEASE_NOTES.md`: release summary, run instructions, validation status, and limitations.
 - `docs/SCREENSHOT_GUIDE.md`: suggested screenshots and captions for GitHub/portfolio presentation.
 
@@ -125,11 +129,11 @@ ScoreMind demonstrates an AI product architecture where domain reasoning is dete
 - If you use MuseScore or notation software, export MusicXML/XML first, then upload.
 - If you only have PDF, image, screenshot, or scanned paper, convert externally to MusicXML before using this MVP.
 - The Score Input Workspace explains these paths in the frontend, but it does not add PDF/image/MIDI/audio upload.
-- Input conversion is future work. MVP 3.9 keeps the runtime score upload path limited to MusicXML/XML.
+- Input conversion is future work. MVP 3.10 keeps the runtime score upload path limited to MusicXML/XML.
 
 ## Sample Files
 
-MVP 3.9 includes downloadable demo MusicXML files in `frontend/public/samples`:
+MVP 3.10 includes downloadable demo MusicXML files in `frontend/public/samples`:
 
 - `frontend/public/samples/c_major_progression.musicxml`: demonstrates global key, Roman numerals, harmonic functions, and Measure Walkthrough.
 - `frontend/public/samples/carried_context_notes.musicxml`: demonstrates note-level chord-tone labels and carried previous chord context.
@@ -140,7 +144,7 @@ In the frontend, use the `Try sample files` panel to download a sample, then upl
 
 - Backend deterministic analysis remains the source of truth.
 - Student Analysis is computed only from existing backend analysis JSON and does not infer new conclusions.
-- MusicXML/XML remains the only runtime score input path in MVP 3.9; review JSON import is a separate human annotation workflow.
+- MusicXML/XML remains the only runtime score input path in MVP 3.10; review JSON import is a separate human annotation workflow.
 - OMR feasibility work lives only in `docs/OMR_EXPERIMENT.md` and `experiments/omr`.
 - Input conversion, real LLM explanation, and advanced music-theory analysis are future work.
 
@@ -216,4 +220,4 @@ Validation docs:
 
 ## Limitations
 
-MVP 3.9 renders MusicXML only and does not use an LLM. Score linkage is limited to verified written measures; a source ID in a review identifies backend data, not a clickable note on the score. It still does not support PDF/image/OMR, `.mxl`, audio, MIDI, local modulation, full classical non-chord tone classification, full sustained harmony inference, phrase-level harmony, melody/voice-leading analysis, or jazz/modern harmony. Non-chord tone candidate hints remain conservative. Review records are local human annotations, not machine corrections or a marketplace; they require the same file bytes and analysis version for import. OMR remains isolated research.
+MVP 3.10 renders MusicXML only and does not use an LLM. Score linkage is limited to verified written measures; a source ID in a review identifies backend data, not a clickable note on the score. It still does not support PDF/image/OMR, `.mxl`, audio, MIDI, local modulation, full classical non-chord tone classification, full sustained harmony inference, phrase-level harmony, melody/voice-leading analysis, or jazz/modern harmony. Non-chord tone candidate hints remain conservative. Review records are local human annotations, not machine corrections or a marketplace; they require the same file bytes and analysis version for import. OMR remains isolated research.

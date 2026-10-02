@@ -623,7 +623,7 @@ export default function Home() {
       <section className="workspace">
         <header className="page-header">
           <div>
-            <p className="eyebrow">MVP 3.9</p>
+            <p className="eyebrow">MVP 3.10</p>
             <h1>ScoreMind</h1>
             <p className="product-subtitle">AI Music Score Understanding</p>
           </div>
@@ -703,7 +703,7 @@ export default function Home() {
               ) : (
                 <div className="unsupported-source-note">
                   <p>
-                    This source is guidance-only in MVP 3.9. The runtime upload control still accepts only
+                    This source is guidance-only in MVP 3.10. The runtime upload control still accepts only
                     {" "}.musicxml and .xml files after you export or convert externally.
                   </p>
                 </div>
@@ -715,7 +715,7 @@ export default function Home() {
             <>
               {analysis && <WrittenMeasureNavigator options={measureOptions} selected={selectedMeasureIndex} onSelect={selectWrittenMeasure} label="乐谱预览书面小节导航" />}
               <ScorePreview key={fileRevision} xml={musicXmlText} timeline={analysis?.notated_timeline} selectedMeasureIndex={selectedMeasureIndex} navigationToken={navigationToken} />
-              {analysis && <ExpertReview key={`${reviewScope?.file_sha256 ?? "unavailable"}:${selectedMeasureIndex}`} scope={reviewScope} selectedMeasureIndex={selectedMeasureIndex} records={reviewRecords} onSave={saveReview} onDelete={removeReview} onImport={importReviews} onExport={exportReviews} pendingImportCount={pendingReviewImport?.length ?? null} onConfirmImport={confirmReviewImport} onCancelImport={() => setPendingReviewImport(null)} message={reviewMessage} />}
+              {analysis && <ExpertReview key={`${reviewScope?.file_sha256 ?? "unavailable"}:${selectedMeasureIndex}`} scope={reviewScope} selectedMeasureIndex={selectedMeasureIndex} records={reviewRecords} onSelectMeasureIndex={selectWrittenMeasure} onSave={saveReview} onDelete={removeReview} onImport={importReviews} onExport={exportReviews} pendingImportCount={pendingReviewImport?.length ?? null} onConfirmImport={confirmReviewImport} onCancelImport={() => setPendingReviewImport(null)} message={reviewMessage} />}
             </>
           )}
         </section>
@@ -763,7 +763,7 @@ export default function Home() {
             <ul>
               <li>Use backend/tests/fixtures/c_major_progression.musicxml for the basic Roman numeral workflow.</li>
               <li>Use backend/tests/fixtures/carried_context_notes.musicxml for the note-level carried context workflow.</li>
-              <li>Validation fixtures are intentionally simple; complex repertoire is out of scope for this MVP.</li>
+              <li>Short CC0 repertoire excerpts support structural validation; complex harmonic judgments still need independent expert review.</li>
               <li>Use docs/VALIDATION_REPORT_TEMPLATE.md to record repeatable accuracy reviews.</li>
             </ul>
           </div>

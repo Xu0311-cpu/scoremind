@@ -8,7 +8,7 @@ const source = fs.readFileSync(path.join(__dirname, "../app/reviewRecords.ts"), 
 const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
 const mod = { exports: {} };
 new Function("module", "exports", compiled)(mod, mod.exports);
-const { MAX_REVIEW_BYTES, createReviewPackage, deleteReviewRecord, parseReviewPackage, readReviewDraft, reviewScopeFromTimeline, reviewStorageKey, serializeReviewPackage, submitReviewRecord, upsertReviewRecord, writeReviewDraft } = mod.exports;
+const { MAX_REVIEW_BYTES, createReviewPackage, deleteReviewRecord, nextFlaggedReviewMeasure, parseReviewPackage, readReviewDraft, reviewScopeFromTimeline, reviewStorageKey, serializeReviewPackage, submitReviewRecord, summarizeReviewMeasures, upsertReviewRecord, writeReviewDraft } = mod.exports;
 
 const sha = "a".repeat(64);
 const otherSha = "b".repeat(64);
@@ -127,4 +127,32 @@ test("a rejected save leaves the form draft intact and never invokes reset", () 
   assert.deepEqual(records, [record]);
   assert.equal(submitReviewRecord({ ...record, rationale: "已核实" }, () => true, () => { resetCalls += 1; }), true);
   assert.equal(resetCalls, 1);
+});
+
+test("triage counts separate human opinions by written index, not repeated display number", () => {
+  const records = [
+    { ...record, id: "correct-1", status: "correct" },
+    { ...record, id: "wrong-1", status: "wrong" },
+    { ...record, id: "review-2", measure_index: 2, source_note_id: "p1:m2:n1", status: "needs_review" },
+  ];
+  const summaries = summarizeReviewMeasures(scope, records);
+  assert.deepEqual(summaries, [
+    { measure_index: 1, total: 2, correct: 1, needs_review: 0, wrong: 1 },
+    { measure_index: 2, total: 1, correct: 0, needs_review: 1, wrong: 0 },
+  ]);
+  assert.equal(nextFlaggedReviewMeasure(summaries, 1), 2);
+  assert.equal(nextFlaggedReviewMeasure(summaries, 2), 1);
+  assert.equal(nextFlaggedReviewMeasure(summaries, null), 1);
+});
+
+test("triage updates after edit, delete and validated import without changing analysis", () => {
+  const analysis = { detected_chords: [{ root: "C", quality: "major" }] };
+  const revised = upsertReviewRecord(scope, [record], { ...record, status: "correct" });
+  assert.equal(nextFlaggedReviewMeasure(summarizeReviewMeasures(scope, revised), 1), null);
+  assert.deepEqual(summarizeReviewMeasures(scope, deleteReviewRecord(scope, revised, record.id)), []);
+  const imported = parseReviewPackage(serializeReviewPackage(scope, [
+    { ...record, id: "other-2", measure_index: 2, source_note_id: null, status: "wrong" },
+  ]), scope).records;
+  assert.equal(nextFlaggedReviewMeasure(summarizeReviewMeasures(scope, imported), 1), 2);
+  assert.deepEqual(analysis, { detected_chords: [{ root: "C", quality: "major" }] });
 });

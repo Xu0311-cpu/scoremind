@@ -101,6 +101,12 @@ OpenSheetMusicDisplay renders the uploaded MusicXML text in the browser. This pr
 
 校审状态与机器分析 `analysis` 完全分离；解释请求和 Markdown Learning Report 仍只读取原有确定性分析。来源 ID 是同一文件版本内的符号化引用，**不是** OSMD 音符点击定位。当前只有单机浏览器草稿与手动 JSON 交接，没有账号、数据库、多人同步或自动纠错。
 
+### MVP 3.10 真实谱例验证与人工校审导航
+
+`backend/tests/fixtures/professional/` 只收录明确允许再分发的 CC0 MusicXML 短节选。`docs/PROFESSIONAL_VALIDATION.md` 固定源 URL、提交、节选范围、SHA-256 与**先于程序输出**写定的结构性预期。`test_professional_validation.py` 通过真实上传 API 对照记谱事实，复杂和声保留 `unclear`，不会把输出自动当成标准答案；这一小集合不能给出总体专业准确率。
+
+`reviewRecords.ts` 在现有合法记录数组上按 `measure_index` 计算正确、存疑、错误的**分别计数**，并选择书面顺序上的下一处存疑/错误；末尾回到首处。`ExpertReview.tsx` 只展示这些人工计数和跳转控件，`page.tsx` 将选择交给已有的书面小节共用导航。显示编号不参与索引；导入、增删改和换谱后重新由当前文件记录计算。该统计不读取和弦/调性/时间轴分析结果、不合成共识，也不进入解释、报告或后端。
+
 ## Student View vs Technical Evidence
 
 Student Analysis is the default user-facing path. It includes:

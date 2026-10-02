@@ -36,6 +36,36 @@ export type ReviewScope = {
   measure_sources: Map<number, Set<string>>;
 };
 
+export type ReviewMeasureSummary = {
+  measure_index: number;
+  total: number;
+  correct: number;
+  needs_review: number;
+  wrong: number;
+};
+
+export function summarizeReviewMeasures(scope: ReviewScope, records: ReviewRecord[]): ReviewMeasureSummary[] {
+  const byIndex = new Map<number, ReviewMeasureSummary>();
+  for (const index of scope.measure_sources.keys()) {
+    byIndex.set(index, { measure_index: index, total: 0, correct: 0, needs_review: 0, wrong: 0 });
+  }
+  for (const record of records) {
+    const summary = byIndex.get(record.measure_index);
+    if (!summary) continue;
+    summary.total += 1;
+    summary[record.status] += 1;
+  }
+  return [...byIndex.values()].filter((summary) => summary.total > 0)
+    .sort((a, b) => a.measure_index - b.measure_index);
+}
+
+export function nextFlaggedReviewMeasure(summaries: ReviewMeasureSummary[], currentIndex: number | null): number | null {
+  const flagged = summaries.filter((summary) => summary.needs_review > 0 || summary.wrong > 0);
+  if (!flagged.length) return null;
+  return flagged.find((summary) => summary.measure_index > (currentIndex ?? 0))?.measure_index
+    ?? flagged[0].measure_index;
+}
+
 export function reviewScopeFromTimeline(
   file_sha256: string,
   analysis_version: string,
