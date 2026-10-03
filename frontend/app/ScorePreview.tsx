@@ -4,12 +4,14 @@ import { useEffect, useRef, useState } from "react";
 import type { OpenSheetMusicDisplay } from "opensheetmusicdisplay";
 import type { NotatedTimelineData } from "./NotatedTimeline";
 import { locateWrittenMeasure } from "./scoreMeasureNavigation";
+import { verifiedScoreStructure, type VerifiedScoreStructure } from "./scoreStructure";
 
-export default function ScorePreview({ xml, timeline, selectedMeasureIndex, navigationToken }: {
+export default function ScorePreview({ xml, timeline, selectedMeasureIndex, navigationToken, onStructureChange }: {
   xml: string | null;
   timeline?: NotatedTimelineData | null;
   selectedMeasureIndex: number | null;
   navigationToken: number;
+  onStructureChange?: (structure: VerifiedScoreStructure | null, reason: string | null) => void;
 }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const osmdRef = useRef<OpenSheetMusicDisplay | null>(null);
@@ -19,6 +21,8 @@ export default function ScorePreview({ xml, timeline, selectedMeasureIndex, navi
   const [renderRevision, setRenderRevision] = useState(0);
   const [renderError, setRenderError] = useState(false);
   const [locationMessage, setLocationMessage] = useState("乐谱尚未渲染，暂不可定位。");
+  const structureCallbackRef = useRef(onStructureChange);
+  structureCallbackRef.current = onStructureChange;
 
   function clearMarks() {
     for (const mark of marksRef.current) mark.parentNode?.removeChild(mark);
@@ -34,6 +38,7 @@ export default function ScorePreview({ xml, timeline, selectedMeasureIndex, navi
     let resizeTimer: ReturnType<typeof setTimeout> | null = null;
     setRenderError(false);
     setLocationMessage("乐谱正在渲染，暂不可定位。");
+    structureCallbackRef.current?.(null, null);
     container.innerHTML = "";
 
     async function renderScore() {
@@ -44,6 +49,11 @@ export default function ScorePreview({ xml, timeline, selectedMeasureIndex, navi
         const osmd = new OpenSheetMusicDisplay(container, { autoResize: false, drawTitle: true });
         await osmd.load(xmlToRender);
         if (cancelled) return;
+        try {
+          structureCallbackRef.current?.(verifiedScoreStructure(xmlToRender, osmd), null);
+        } catch (error) {
+          structureCallbackRef.current?.(null, error instanceof Error ? error.message : "书面小节结构无法验证。");
+        }
         osmd.render();
         osmdRef.current = osmd;
         pointConstructorRef.current = PointF2D;
@@ -75,6 +85,7 @@ export default function ScorePreview({ xml, timeline, selectedMeasureIndex, navi
         osmdRef.current = null;
         setRenderError(true);
         setLocationMessage("乐谱渲染失败，无法定位；后端分析仍可独立运行。");
+        structureCallbackRef.current?.(null, "谱面未能渲染，人工标注位置无法验证。");
       }
     }
     void renderScore();
