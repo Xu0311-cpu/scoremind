@@ -1,4 +1,16 @@
-# Validation Guide for MVP 3.10
+# Validation Guide for MVP 3.11
+
+## MVP 3.11 独立和声标注验证
+
+使用 [`HARMONIC_ANNOTATION_ACCEPTANCE.md`](HARMONIC_ANNOTATION_ACCEPTANCE.md) 中固定的两份契约样例和受控漏录第二事件例。前端无新依赖，`npm test` 覆盖严格键/版本、错谱 SHA、书面索引、非法或越界分数、状态组合、多事件、1 MiB UTF-8 容量、草稿往返以及存储失败时禁用新的 `score_only_attested`。后端 `python -m pytest` 与前端 `npm run build` 仍是回归门槛。人工标注示例不是专业和声金标准，不计算准确率。
+
+浏览器用真实 `simple_chords.musicxml` 与 `timeline_meter_tuplets.musicxml`：上传后先核对原谱及独立标注、不挂载机器结果；录入 `unclear` 或已核定事件并导出 JSON，确认实际落盘、再导回相同字节文件；两个显示号相同的小节必须按书面索引分别保存。点击 Analyze 后核对旧分析不变、后续编辑为 `machine_visible`；刷新重传同一文件继续保持揭示状态，换谱后不显示旧谱记录，错谱 JSON 导入拒绝且原表单不清空。验证旧校审包与新包互拒，以及人工判断不进入解释请求或学习报告。
+
+禁用/拒绝浏览器存储、配额耗尽与指纹计算失败时，先验证退出盲态确认：取消不泄露机器内容；确认后普通 Analyze 仍能使用，新建/编辑只能为 `machine_visible`，并提示刷新历史不可证明。1280px 与 390px 检查表单、长中文与 HTML 字符串只作文本、无页面横向溢出和至少 44px 触控目标。若浏览器不支持模拟上述故障或 blob 下载落盘，必须如实记为未完成，不能以单测替代真实浏览器验收。
+
+本轮本地复验：Python 3.13 后端 `94 passed`（既有 RequestsDependencyWarning 1 条），前端 Node 内置测试 `27 passed`，`npm run build` 通过。内置浏览器上传真实 `simple_chords.musicxml`：原文件 SHA 与固定契约样例一致；机器结果在 Analyze 前未挂载，保存仅看原谱的 `unclear` 条目后，Analyze 揭示结果；刷新并重新上传相同字节后，该条目恢复且后续编辑基准为 `machine_visible`。在 390px 宽度录入 500 字中文与 `<img src=x onerror=alert(1)>`，页面横向溢出为 0，未生成 HTML 图片元素；标注按钮最小高度实测 44px；同文件 JSON 导入出现替换确认并可完成覆盖。改传 `timeline_meter_tuplets.musicxml` 后，两个显示编号同为 `1` 的小节仍分别对应书面索引 2/3，旧谱记录不显示，错谱 JSON 因指纹不符拒绝。1280px 宽度亦无页面横向溢出。
+
+导出按钮在内置浏览器显示“已触发下载”，但该浏览器没有上报 blob 下载事件，本机 Downloads 与临时目录也没有找到对应文件；**本轮未证实新包实际落盘或用落盘文件重新导入**，仅完成了 JSON 契约的序列化/读取往返测试与仓库样例的浏览器导入。对照测试中，现有静态 MusicXML 样例链接能落盘，而使用相同 `blob:` 下载方式的旧校审 JSON 导出本次也未产生新文件；因此不能仅凭此现象断定新包导出逻辑独有故障。禁用存储、容量不足、指纹失败及取消揭示已由无依赖单测覆盖，但未在真实浏览器故障环境复现；390px 指针操作不等同实体触屏测试。独立复审时应优先补验这些环境边界，不能将其列为已通过的端到端验收。
 
 ## MVP 3.10 真实谱例与校审导航验证
 

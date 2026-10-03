@@ -1,6 +1,6 @@
-# MVP 3.11 契约验收样例（待复审）
+# MVP 3.11 契约验收样例
 
-这些是**未来实现的测试向量，不是已经发生的专业人工校审或准确率结果**。示例内容直接依据仓库 MusicXML 的记谱元素或刻意标为不明确，绝不由 ScoreMind 分析输出生成“标准答案”。契约定义见 [HARMONIC_ANNOTATION_DESIGN.md](HARMONIC_ANNOTATION_DESIGN.md)。设计阶段不新增运行时代码、测试框架或乐谱 fixture。
+这些是**契约测试向量，不是已经发生的专业人工校审或准确率结果**。示例内容直接依据仓库 MusicXML 的记谱元素或刻意标为不明确，绝不由 ScoreMind 分析输出生成“标准答案”。契约定义见 [HARMONIC_ANNOTATION_DESIGN.md](HARMONIC_ANNOTATION_DESIGN.md)。
 
 ## 可复核输入
 
@@ -116,4 +116,4 @@
 | 无金标准 | 无条目、`unclear`、`machine_visible` 或字段为 null | UI 标“未评估”或“不明确”；**无自动准确率或隐含分母**，不产生 0%/100% |
 | 边界页面 | 1280px 与 390px 查看/编辑/导入，换谱、刷新 | 长依据换行，无页面横向溢出；文件隔离；无虚假的音符级高亮 |
 
-本轮只请求对契约与矩阵的复审。复审通过前，不实现 UI、导入器、比较器或版本升级。
+设计复审已通过；矩阵仍是 MVP 3.11 实施与独立复审的验收依据，不代表所有浏览器场景已经实测。实际执行情况见 [VALIDATION.md](VALIDATION.md)。

@@ -1,10 +1,14 @@
 "use client";
 
-import { ChangeEvent, FormEvent, useMemo, useRef, useState } from "react";
+import { ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import NotatedTimeline, { type NotatedTimelineData } from "./NotatedTimeline";
 import ScorePreview from "./ScorePreview";
 import WrittenMeasureNavigator from "./WrittenMeasureNavigator";
 import ExpertReview from "./ExpertReview";
+import HarmonicAnnotation from "./HarmonicAnnotation";
+import { MAX_HARMONY_BYTES, createHarmonyPackage, parseHarmonyPackage, readHarmonyDraft, saveHarmonyEntryWithStorage, updateHarmonyPackage, validateHarmonyPackage, writeHarmonyDraft, type HarmonyEntry, type HarmonyPackage, type HarmonyScope } from "./harmonicAnnotations";
+import { readRevealMarker, requestMachineReveal } from "./harmonicReveal";
+import type { VerifiedScoreStructure } from "./scoreStructure";
 import { MAX_REVIEW_BYTES, deleteReviewRecord, parseReviewPackage, readReviewDraft, reviewScopeFromTimeline, serializeReviewPackage, upsertReviewRecord, writeReviewDraft, type ReviewRecord, type ReviewScope } from "./reviewRecords";
 import { initialMeasureIndex, writtenMeasureOptions } from "./scoreMeasureNavigation";
 
@@ -276,6 +280,7 @@ export default function Home() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const fileGenerationRef = useRef(0);
   const analysisGenerationRef = useRef(0);
+  const sessionRevealedRef = useRef(new Set<string>());
   const [fileRevision, setFileRevision] = useState(0);
   const [file, setFile] = useState<File | null>(null);
   const [musicXmlText, setMusicXmlText] = useState<string | null>(null);
@@ -296,6 +301,16 @@ export default function Home() {
   const [reviewRecords, setReviewRecords] = useState<ReviewRecord[]>([]);
   const [reviewMessage, setReviewMessage] = useState<string | null>(null);
   const [pendingReviewImport, setPendingReviewImport] = useState<ReviewRecord[] | null>(null);
+  const [fileFingerprint, setFileFingerprint] = useState<string | null>(null);
+  const [scoreStructure, setScoreStructure] = useState<VerifiedScoreStructure | null>(null);
+  const [structureReason, setStructureReason] = useState<string | null>(null);
+  const [fingerprintFailed, setFingerprintFailed] = useState(false);
+  const [machineRevealed, setMachineRevealed] = useState(false);
+  const [blindEligible, setBlindEligible] = useState(false);
+  const [harmonyPackage, setHarmonyPackage] = useState<HarmonyPackage | null>(null);
+  const [harmonyMessage, setHarmonyMessage] = useState<string | null>(null);
+  const [pendingHarmonyImport, setPendingHarmonyImport] = useState<HarmonyPackage | null>(null);
+  const [harmonyImportRevision, setHarmonyImportRevision] = useState(0);
 
   const detectedChordCount = useMemo(() => {
     if (!analysis) {
@@ -351,6 +366,30 @@ export default function Home() {
 
   const selectedInputSource = INPUT_SOURCE_OPTIONS.find((option) => option.id === inputSource) ?? INPUT_SOURCE_OPTIONS[0];
   const measureOptions = useMemo(() => writtenMeasureOptions(analysis?.notated_timeline), [analysis]);
+  const harmonyScope = useMemo<HarmonyScope | null>(() => fileFingerprint && scoreStructure
+    ? { file_sha256: fileFingerprint, measure_durations_qn: scoreStructure.measure_durations_qn }
+    : null, [fileFingerprint, scoreStructure]);
+
+  useEffect(() => {
+    if (!harmonyScope) return;
+    let eligible = true;
+    let loaded: HarmonyPackage | null = null;
+    let wasRevealed = sessionRevealedRef.current.has(harmonyScope.file_sha256);
+    try {
+      const storage = window.localStorage;
+      wasRevealed ||= readRevealMarker(storage, harmonyScope.file_sha256);
+      loaded = readHarmonyDraft(storage, harmonyScope);
+    } catch {
+      eligible = false;
+      setHarmonyMessage("本地存储不可读取或草稿格式无效：不能新建盲标注声明。普通 Analyze 仍可在明确确认后使用；请导出内存记录。刷新后无法证明查看历史。");
+    }
+    if (!loaded) loaded = createHarmonyPackage(harmonyScope, "未署名", crypto.randomUUID());
+    setHarmonyPackage(loaded);
+    setBlindEligible(eligible && !wasRevealed && !machineRevealed);
+    if (wasRevealed) setMachineRevealed(true);
+  // The scope changes only when the original file fingerprint or verified score structure changes.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [harmonyScope]);
 
   function selectWrittenMeasure(index: number) {
     setSelectedMeasureIndex(index);
@@ -384,9 +423,28 @@ export default function Home() {
     setReviewRecords([]);
     setReviewMessage(null);
     setPendingReviewImport(null);
+    setFileFingerprint(null);
+    setFingerprintFailed(false);
+    setScoreStructure(null);
+    setStructureReason(null);
+    setMachineRevealed(false);
+    setBlindEligible(false);
+    setHarmonyPackage(null);
+    setHarmonyMessage(null);
+    setPendingHarmonyImport(null);
+    setHarmonyImportRevision(0);
 
     if (selectedFile) {
       void loadMusicXmlText(selectedFile, fileGenerationRef.current);
+      const generation = fileGenerationRef.current;
+      void fingerprintFile(selectedFile).then((fingerprint) => {
+        if (fileGenerationRef.current === generation) setFileFingerprint(fingerprint);
+      }).catch(() => {
+        if (fileGenerationRef.current === generation) {
+          setFingerprintFailed(true);
+          setHarmonyMessage("原文件指纹计算失败，独立标注已停用；普通 Analyze 可在确认退出盲态后继续。");
+        }
+      });
     }
   }
 
@@ -404,6 +462,25 @@ export default function Home() {
     if (!file) {
       setError("Please select a .musicxml or .xml file first. / 请先选择 .musicxml 或 .xml 文件。");
       return;
+    }
+
+    const generationAtClick = fileGenerationRef.current;
+    const fingerprint = fileFingerprint ?? await fingerprintFile(file).catch(() => null);
+    if (generationAtClick !== fileGenerationRef.current) return;
+    if (!fingerprint) setFingerprintFailed(true);
+    if (!machineRevealed && !sessionRevealedRef.current.has(fingerprint ?? `unidentified:${generationAtClick}`)) {
+      let storage: Storage | null = null;
+      try { storage = window.localStorage; } catch { /* Explicit session-only exit is handled below. */ }
+      const decision = requestMachineReveal(storage, fingerprint, () => window.confirm(
+        "无法持久记录机器结果已查看状态（存储或文件指纹不可用）。仍可继续普通 Analyze，但本次会话的新建/编辑人工标注只能标为 machine_visible；刷新后无法证明查看历史。确定退出盲态吗？",
+      ));
+      if (decision === "cancelled") return;
+      if (decision === "revealed_session_only") {
+        setHarmonyMessage("已退出盲态；机器分析可用。存储或指纹不可用，本次新建/编辑只能标为 machine_visible，刷新后无法证明查看历史。请导出人工记录备份。");
+        setBlindEligible(false);
+      }
+      sessionRevealedRef.current.add(fingerprint ?? `unidentified:${generationAtClick}`);
+      setMachineRevealed(true);
     }
 
     setLoadingAnalysis(true);
@@ -424,7 +501,6 @@ export default function Home() {
     setPendingReviewImport(null);
 
     try {
-      const fingerprintPromise = fingerprintFile(file).catch(() => null);
       const formData = new FormData();
       formData.append("file", file);
       const response = await fetch(`${API_BASE_URL}/api/v1/analyze/musicxml`, {
@@ -435,7 +511,6 @@ export default function Home() {
         throw new Error(await getApiErrorMessage(response, "Analysis failed. Please check the file and try again. / 分析失败，请检查文件后重试。"));
       }
       const payload = await response.json();
-      const fingerprint = await fingerprintPromise;
       if (analysisGenerationRef.current === generation) {
         setAnalysis(payload);
         setSelectedMeasureIndex(initialMeasureIndex(payload.notated_timeline));
@@ -510,6 +585,16 @@ export default function Home() {
     setReviewRecords([]);
     setReviewMessage(null);
     setPendingReviewImport(null);
+    setFileFingerprint(null);
+    setFingerprintFailed(false);
+    setScoreStructure(null);
+    setStructureReason(null);
+    setMachineRevealed(false);
+    setBlindEligible(false);
+    setHarmonyPackage(null);
+    setHarmonyMessage(null);
+    setPendingHarmonyImport(null);
+    setHarmonyImportRevision(0);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -584,6 +669,93 @@ export default function Home() {
     window.setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
+  function keepHarmonyInMemory(next: HarmonyPackage, storageFailed: boolean) {
+    setHarmonyPackage(next);
+    if (storageFailed) {
+      setBlindEligible(false);
+      setHarmonyMessage("本地存储失败：人工记录仅在当前页面内存中，请立即导出 JSON；刷新后可能丢失，也无法证明查看历史。新建/编辑不能声明 score_only_attested。");
+    } else {
+      setHarmonyMessage("人工标注已保存到本浏览器草稿；不是云同步，请导出 JSON 备份。");
+    }
+  }
+
+  function saveHarmony(entry: HarmonyEntry): boolean {
+    if (!harmonyScope || !harmonyPackage) return false;
+    const old = harmonyPackage.entries.find((item) => item.id === entry.id);
+    if (old?.basis === "score_only_attested" && (machineRevealed || !blindEligible)
+        && !window.confirm("此条原本是仅看原谱时保存的自述。编辑将覆盖本地独立版本并改为 machine_visible。请先导出快照。仍要继续吗？")) return false;
+    const safe = { ...entry, basis: machineRevealed || !blindEligible || old?.basis === "machine_visible"
+      ? "machine_visible" as const : entry.basis };
+    try {
+      let storage: Storage | null = null;
+      try { storage = window.localStorage; } catch { /* Keep a session-only machine-visible entry. */ }
+      const result = saveHarmonyEntryWithStorage(harmonyScope, harmonyPackage, safe, storage);
+      keepHarmonyInMemory(result.value, !result.stored);
+      return true;
+    } catch (err) {
+      setHarmonyMessage(err instanceof Error ? err.message : "人工标注无效，表单未清空。");
+      return false;
+    }
+  }
+
+  function updateHarmonyMetadata(changes: Partial<Pick<HarmonyPackage, "reviewer_label" | "pitch_basis">>) {
+    if (!harmonyScope || !harmonyPackage) return;
+    try {
+      const next = updateHarmonyPackage(harmonyScope, harmonyPackage, changes);
+      try { writeHarmonyDraft(window.localStorage, harmonyScope, next); keepHarmonyInMemory(next, false); }
+      catch { keepHarmonyInMemory(next, true); }
+    } catch (err) { setHarmonyMessage(err instanceof Error ? err.message : "人工标注元数据无效。"); }
+  }
+
+  function removeHarmonyEntry(index: number) {
+    if (!harmonyScope || !harmonyPackage) return;
+    const next = updateHarmonyPackage(harmonyScope, harmonyPackage,
+      { entries: harmonyPackage.entries.filter((entry) => entry.measure_index !== index) });
+    try { writeHarmonyDraft(window.localStorage, harmonyScope, next); keepHarmonyInMemory(next, false); }
+    catch { keepHarmonyInMemory(next, true); }
+  }
+
+  async function importHarmony(fileToImport: File) {
+    if (!harmonyScope) return;
+    const generation = fileGenerationRef.current;
+    try {
+      if (fileToImport.size > MAX_HARMONY_BYTES) throw new Error("人工和声 JSON 超过 1 MiB 上限。");
+      const imported = parseHarmonyPackage(await fileToImport.text(), harmonyScope);
+      if (generation !== fileGenerationRef.current) return;
+      setPendingHarmonyImport(imported);
+      setHarmonyMessage("导入值仅是校审者声明，不证明未看机器结果；确认前请先导出现有草稿。");
+    } catch (err) {
+      if (generation === fileGenerationRef.current) setHarmonyMessage(err instanceof Error ? err.message : "人工和声 JSON 导入失败；原草稿及表单未改变。");
+    }
+  }
+
+  function confirmHarmonyImport() {
+    if (!pendingHarmonyImport || !harmonyScope) return;
+    try {
+      const next = validateHarmonyPackage(pendingHarmonyImport, harmonyScope);
+      try { writeHarmonyDraft(window.localStorage, harmonyScope, next); keepHarmonyInMemory(next, false); }
+      catch { keepHarmonyInMemory(next, true); }
+      setPendingHarmonyImport(null);
+      setHarmonyImportRevision((revision) => revision + 1);
+    } catch (err) { setHarmonyMessage(err instanceof Error ? err.message : "人工和声导入失败。"); }
+  }
+
+  function exportHarmony() {
+    if (!harmonyScope || !harmonyPackage) return;
+    try {
+      const serialized = JSON.stringify(validateHarmonyPackage(harmonyPackage, harmonyScope));
+      const url = URL.createObjectURL(new Blob([serialized], { type: "application/json;charset=utf-8" }));
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = `scoremind-harmony-${harmonyScope.file_sha256.slice(0, 12)}.json`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+      setHarmonyMessage("已触发 JSON 下载；请在浏览器下载列表确认落盘。导出不会上传原始乐谱。");
+    } catch (err) { setHarmonyMessage(err instanceof Error ? err.message : "人工和声 JSON 导出失败。"); }
+  }
+
   async function handleCopyReport() {
     if (!markdownReport) {
       return;
@@ -623,7 +795,7 @@ export default function Home() {
       <section className="workspace">
         <header className="page-header">
           <div>
-            <p className="eyebrow">MVP 3.10</p>
+            <p className="eyebrow">MVP 3.11</p>
             <h1>ScoreMind</h1>
             <p className="product-subtitle">AI Music Score Understanding</p>
           </div>
@@ -703,7 +875,7 @@ export default function Home() {
               ) : (
                 <div className="unsupported-source-note">
                   <p>
-                    This source is guidance-only in MVP 3.10. The runtime upload control still accepts only
+                    This source is guidance-only in MVP 3.11. The runtime upload control still accepts only
                     {" "}.musicxml and .xml files after you export or convert externally.
                   </p>
                 </div>
@@ -713,9 +885,18 @@ export default function Home() {
 
           {file && (
             <>
-              {analysis && <WrittenMeasureNavigator options={measureOptions} selected={selectedMeasureIndex} onSelect={selectWrittenMeasure} label="乐谱预览书面小节导航" />}
-              <ScorePreview key={fileRevision} xml={musicXmlText} timeline={analysis?.notated_timeline} selectedMeasureIndex={selectedMeasureIndex} navigationToken={navigationToken} />
-              {analysis && <ExpertReview key={`${reviewScope?.file_sha256 ?? "unavailable"}:${selectedMeasureIndex}`} scope={reviewScope} selectedMeasureIndex={selectedMeasureIndex} records={reviewRecords} onSelectMeasureIndex={selectWrittenMeasure} onSave={saveReview} onDelete={removeReview} onImport={importReviews} onExport={exportReviews} pendingImportCount={pendingReviewImport?.length ?? null} onConfirmImport={confirmReviewImport} onCancelImport={() => setPendingReviewImport(null)} message={reviewMessage} />}
+              {machineRevealed && analysis && <WrittenMeasureNavigator options={measureOptions} selected={selectedMeasureIndex} onSelect={selectWrittenMeasure} label="乐谱预览书面小节导航" />}
+              <ScorePreview key={fileRevision} xml={musicXmlText} timeline={machineRevealed ? analysis?.notated_timeline : null}
+                selectedMeasureIndex={selectedMeasureIndex} navigationToken={navigationToken}
+                onStructureChange={(structure, reason) => { setScoreStructure(structure); setStructureReason(reason); if (structure) setSelectedMeasureIndex((current) => current ?? 1); }} />
+              <HarmonicAnnotation key={`${fileRevision}:${harmonyPackage?.annotation_set_id ?? "loading"}:${harmonyImportRevision}`} structure={scoreStructure}
+                value={harmonyPackage} selectedIndex={selectedMeasureIndex} onSelectIndex={selectWrittenMeasure}
+                blindEligible={blindEligible} revealed={machineRevealed}
+                onSaveEntry={saveHarmony} onDeleteEntry={removeHarmonyEntry} onMetadata={updateHarmonyMetadata}
+                onImport={importHarmony} onExport={exportHarmony} pendingCount={pendingHarmonyImport?.entries.length ?? null}
+                onConfirmImport={confirmHarmonyImport} onCancelImport={() => setPendingHarmonyImport(null)}
+                message={harmonyMessage} unavailableReason={fingerprintFailed ? "文件指纹计算失败；独立标注不可用，但普通 Analyze 仍可经确认继续。" : structureReason} />
+              {machineRevealed && analysis && <ExpertReview key={`${reviewScope?.file_sha256 ?? "unavailable"}:${selectedMeasureIndex}`} scope={reviewScope} selectedMeasureIndex={selectedMeasureIndex} records={reviewRecords} onSelectMeasureIndex={selectWrittenMeasure} onSave={saveReview} onDelete={removeReview} onImport={importReviews} onExport={exportReviews} pendingImportCount={pendingReviewImport?.length ?? null} onConfirmImport={confirmReviewImport} onCancelImport={() => setPendingReviewImport(null)} message={reviewMessage} />}
             </>
           )}
         </section>
@@ -771,7 +952,7 @@ export default function Home() {
 
         {error && <div className="error-box">{error}</div>}
 
-        {analysis && (
+        {machineRevealed && analysis && (
           <section className="panel">
             <div className="panel-header">
               <div>
@@ -1202,7 +1383,7 @@ export default function Home() {
           </section>
         )}
 
-        {analysis && (
+        {machineRevealed && analysis && (
           <>
             {explanation && (
               <section className="panel">
@@ -1233,7 +1414,7 @@ export default function Home() {
           </>
         )}
 
-        {analysis && (
+        {machineRevealed && analysis && (
           <section className="panel">
             <div className="panel-header">
               <div>

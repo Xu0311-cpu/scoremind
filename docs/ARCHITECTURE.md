@@ -87,6 +87,12 @@ Important areas:
 
 OpenSheetMusicDisplay renders the uploaded MusicXML text in the browser. This preview is for visual verification only. It is not OMR and does not convert images or PDFs.
 
+### MVP 3.11 独立和声标注
+
+`scoreStructure.ts` 从原 MusicXML 的 `part/measure` 书面顺序与 OSMD `Sheet.SourceMeasures` 交叉核对小节数量、标号和精确分数时值；未验证时不允许输入精确人工拍点。`harmonicAnnotations.ts` 单独定义 `scoremind-independent-harmony` v1 严格 JSON 契约、原文件 SHA-256 与书面索引绑定、规范分数、1 MiB UTF-8 限额及原子导入/导出。它不包含分析版本或机器来源 ID；旧 `scoremind-expert-review` 格式和数据不迁移、不混存。
+
+`HarmonicAnnotation.tsx` 在 Analyze 前仅展示原谱及人工表单。`page.tsx` 的共同揭示闸门在显示任何学生/技术/解释/报告/旧校审机器内容前持久记录该文件已查看状态。标记写入失败或指纹不可用时，用户仍可明确确认退出盲态并普通 Analyze；当前会话新建/编辑只能为 `machine_visible`，不声称刷新后仍能证明查看历史。人工包只写独立浏览器草稿或 JSON，不进入分析 API、解释请求、学习报告或机器置信度。`determined` 仅描述已录事件，不证明整小节穷尽；本版不计算准确率。浏览器本地草稿不是云同步，外部查看或清除存储无法自动核实。
+
 ### MVP 3.8 书面小节定位
 
 `scoreMeasureNavigation.ts` 以 `notated_timeline.measures[].measure_index` 建立全曲书面序号选项；显示小节号只用于选项文案。`ScorePreview.tsx` 在客户端加载 OSMD 1.9.7，核对 `Sheet.SourceMeasures`、`GraphicSheet.MeasureList` 的数量与顺序、每个图形小节的 `parentSourceMeasure`、谱表数与所属页面，再使用 `Drawer.DrawOverlayLine` 绘出选定小节每个谱表的细框。滚动使用绘图接口返回的节点，不查询内部 SVG 小节选择器，也不宣称音符级定位。
