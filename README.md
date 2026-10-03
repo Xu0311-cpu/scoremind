@@ -1,8 +1,10 @@
-# ScoreMind — AI Music Score Understanding (MVP 3.11)
+# ScoreMind — AI Music Score Understanding (MVP 3.12)
 
 ScoreMind is a deterministic MusicXML score understanding tool for music students. It parses symbolic score data, analyzes basic harmony and note-level chord membership, renders a score preview, and turns the result into student-friendly learning views.
 
-Current release: MVP 3.11. Current score uploads remain limited to `.musicxml` and `.xml`.
+Current release: MVP 3.12. Current score uploads remain limited to `.musicxml` and `.xml`.
+
+MVP 3.12 adds a **read-only human comparison view** after the reviewer reveals machine results. It places the independent harmony annotation, same-written-measure machine chord output, and notated timeline evidence alongside one another only when the original-file SHA-256 and written-measure identity can be verified. Ambiguous or unsupported cases say they cannot be directly compared. A shortcut opens the existing ExpertReview form at that written measure; it never saves an opinion automatically. No verdict, accuracy metric, new harmony inference, or change to the independent annotation JSON is introduced. See [comparison rules and acceptance cases](docs/HARMONIC_COMPARISON.md).
 
 MVP 3.11 adds a **separate, browser-local independent harmony annotation** workflow. Reviewers can inspect the original score before revealing machine results, record manually judged events or explicit uncertainty per written measure, and export/import a strict versioned JSON package. It is bound to the original-file SHA-256 and verified written-measure structure, not to the machine analysis version. The old machine-review workflow remains separate. Once machine results are revealed, later edits are `machine_visible`, including after refresh when the marker survives. Storage or fingerprint failure never disables ordinary Analyze: session-only reveal requires explicit confirmation and cannot create a new blind claim. No annotations enter the API, explanation, Learning Report, or accuracy calculation. See the [contract](docs/HARMONIC_ANNOTATION_DESIGN.md) and [acceptance cases](docs/HARMONIC_ANNOTATION_ACCEPTANCE.md).
 
@@ -132,11 +134,11 @@ ScoreMind demonstrates an AI product architecture where domain reasoning is dete
 - If you use MuseScore or notation software, export MusicXML/XML first, then upload.
 - If you only have PDF, image, screenshot, or scanned paper, convert externally to MusicXML before using this MVP.
 - The Score Input Workspace explains these paths in the frontend, but it does not add PDF/image/MIDI/audio upload.
-- Input conversion is future work. MVP 3.11 keeps the runtime score upload path limited to MusicXML/XML.
+- Input conversion is future work. MVP 3.12 keeps the runtime score upload path limited to MusicXML/XML.
 
 ## Sample Files
 
-MVP 3.11 includes downloadable demo MusicXML files in `frontend/public/samples`:
+MVP 3.12 includes downloadable demo MusicXML files in `frontend/public/samples`:
 
 - `frontend/public/samples/c_major_progression.musicxml`: demonstrates global key, Roman numerals, harmonic functions, and Measure Walkthrough.
 - `frontend/public/samples/carried_context_notes.musicxml`: demonstrates note-level chord-tone labels and carried previous chord context.
@@ -147,7 +149,7 @@ In the frontend, use the `Try sample files` panel to download a sample, then upl
 
 - Backend deterministic analysis remains the source of truth.
 - Student Analysis is computed only from existing backend analysis JSON and does not infer new conclusions.
-- MusicXML/XML remains the only runtime score input path in MVP 3.11; review JSON import is a separate human annotation workflow.
+- MusicXML/XML remains the only runtime score input path in MVP 3.12; review JSON import is a separate human annotation workflow.
 - OMR feasibility work lives only in `docs/OMR_EXPERIMENT.md` and `experiments/omr`.
 - Input conversion, real LLM explanation, and advanced music-theory analysis are future work.
 
@@ -223,4 +225,4 @@ Validation docs:
 
 ## Limitations
 
-MVP 3.11 renders MusicXML only and does not use an LLM. Score linkage is limited to verified written measures; a source ID in the older review identifies backend data, not a clickable note on the score. It still does not support PDF/image/OMR, `.mxl`, audio, MIDI, local modulation, full classical non-chord tone classification, full sustained harmony inference, phrase-level harmony, melody/voice-leading analysis, or jazz/modern harmony. Non-chord tone candidate hints remain conservative. Both human workflows are local, not machine corrections or a marketplace: older machine-review records require the same file bytes **and analysis version**, while independent harmony annotations require the same file bytes and verified written structure but intentionally do **not** bind to analysis version. Neither is a gold standard or an accuracy metric. OMR remains isolated research.
+MVP 3.12 renders MusicXML only and does not use an LLM. Score linkage is limited to verified written measures; a source ID in the older review identifies backend data, not a clickable note on the score. It still does not support PDF/image/OMR, `.mxl`, audio, MIDI, local modulation, full classical non-chord tone classification, full sustained harmony inference, phrase-level harmony, melody/voice-leading analysis, or jazz/modern harmony. Non-chord tone candidate hints remain conservative. Both human workflows are local, not machine corrections or a marketplace: older machine-review records require the same file bytes **and analysis version**, while independent harmony annotations require the same file bytes and verified written structure but intentionally do **not** bind to analysis version. The comparison view is not a verdict or accuracy metric. OMR remains isolated research.
