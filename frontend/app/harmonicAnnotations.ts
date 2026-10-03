@@ -153,6 +153,10 @@ export function createHarmonyPackage(scope: HarmonyScope, reviewerLabel: string,
 }
 
 export function updateHarmonyPackage(scope: HarmonyScope, current: HarmonyPackage, changes: Partial<Pick<HarmonyPackage, "reviewer_label" | "pitch_basis" | "entries">>): HarmonyPackage {
+  if (changes.pitch_basis !== undefined && changes.pitch_basis !== current.pitch_basis
+      && current.entries.some((entry) => entry.events.length > 0)) {
+    throw new Error("已有人工和声事件，音高基准已锁定；请先导出备份并清空事件，或新建标注集。");
+  }
   return validateHarmonyPackage({ ...current, ...changes }, scope);
 }
 
@@ -178,6 +182,17 @@ export function readHarmonyDraft(storage: Storage, scope: HarmonyScope): Harmony
 }
 export function writeHarmonyDraft(storage: Storage, scope: HarmonyScope, value: HarmonyPackage): void {
   storage.setItem(harmonyStorageKey(scope.file_sha256), JSON.stringify(validateHarmonyPackage(value, scope)));
+}
+
+export function replaceHarmonyDraft(storage: Storage | null, scope: HarmonyScope, current: HarmonyPackage, imported: HarmonyPackage): { value: HarmonyPackage; stored: boolean } {
+  const next = validateHarmonyPackage(imported, scope);
+  try {
+    if (!storage) throw new Error("浏览器存储不可用。");
+    writeHarmonyDraft(storage, scope, next);
+    return { value: next, stored: true };
+  } catch {
+    return { value: current, stored: false };
+  }
 }
 
 export function saveHarmonyEntryWithStorage(scope: HarmonyScope, current: HarmonyPackage, entry: HarmonyEntry, storage: Storage | null): { value: HarmonyPackage; stored: boolean } {

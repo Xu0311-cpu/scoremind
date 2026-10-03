@@ -104,6 +104,7 @@ export default function HarmonicAnnotation({ structure, value, selectedIndex, on
   const [reviewer, setReviewer] = useState(value?.reviewer_label ?? "");
   const entry = value?.entries.find((item) => item.measure_index === selectedIndex) ?? null;
   const machineVisible = revealed || !blindEligible || entry?.basis === "machine_visible";
+  const pitchBasisLocked = value?.entries.some((item) => item.events.length > 0) ?? false;
 
   async function importFile(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -118,10 +119,11 @@ export default function HarmonicAnnotation({ structure, value, selectedIndex, on
       <p className="panel-note">文件 SHA-256：<code className="review-fingerprint">{value.file_sha256}</code> · 书面小节 {value.measure_count} · 人工已录 {value.entries.length}。{machineVisible ? "新建/编辑只能标为 machine_visible。" : "目前仅看原谱；score_only_attested 仍只是自我声明。"}</p>
       <div className="review-form harmony-metadata">
         <label>校审者署名或化名<input value={reviewer} maxLength={80} onChange={(e) => setReviewer(e.target.value)} onBlur={() => { if (reviewer !== value.reviewer_label) onMetadata({ reviewer_label: reviewer.trim() }); }} /></label>
-        <label>音高基准<select value={value.pitch_basis} onChange={(e) => onMetadata({ pitch_basis: e.target.value as HarmonyPackage["pitch_basis"] })}>
+        <label>音高基准<select value={value.pitch_basis} disabled={pitchBasisLocked} onChange={(e) => onMetadata({ pitch_basis: e.target.value as HarmonyPackage["pitch_basis"] })}>
           <option value="written">记谱音 written</option><option value="concert">实音 concert（人工自行核定）</option>
         </select></label>
       </div>
+      {pitchBasisLocked && <p className="panel-note">已有人工和声事件，音高基准已锁定。要更换基准，请先导出备份并清空事件，或新建标注集。</p>}
       <p className="panel-note">导出包含署名与人工依据，不含原始乐谱。导入仅接受同一原始文件指纹与同一书面小节数的 v1 包；替换前请备份草稿。</p>
       <div className="review-actions"><button type="button" className="secondary-button" onClick={onExport}>导出独立标注 JSON</button>
         <label className="review-import">导入独立标注 JSON<input type="file" accept=".json,application/json" onChange={(e) => void importFile(e)} /></label></div>

@@ -9,7 +9,7 @@ const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.Modu
 const mod = { exports: {} };
 new Function("module", "exports", compiled)(mod, mod.exports);
 const { MAX_HARMONY_BYTES, createHarmonyPackage, harmonyStorageKey, parseHarmonyPackage, readHarmonyDraft,
-  revealStorageKey, saveHarmonyEntry, saveHarmonyEntryWithStorage, updateHarmonyPackage, validateHarmonyPackage, writeHarmonyDraft } = mod.exports;
+  replaceHarmonyDraft, revealStorageKey, saveHarmonyEntry, saveHarmonyEntryWithStorage, updateHarmonyPackage, validateHarmonyPackage, writeHarmonyDraft } = mod.exports;
 
 const sha = "d954c063542c39b11ac271495c33d5a65ffd5b1c835b6cae81f0d1a0094531c5";
 const scope = { file_sha256: sha, measure_durations_qn: ["4", "4", "4", "4"] };
@@ -115,4 +115,32 @@ test("storage failure does not turn package into a blind claim", () => {
   const persisted = saveHarmonyEntryWithStorage(scope, blank, entry, local);
   assert.equal(persisted.stored, true);
   assert.equal(readHarmonyDraft(local, scope).entries[0].basis, "score_only_attested");
+});
+
+test("failed import replacement preserves the saved draft and current package", () => {
+  const local = storage();
+  const original = saveHarmonyEntry(scope, blank, entry);
+  const imported = saveHarmonyEntry(scope, createHarmonyPackage(scope, "另一位校审者", "another-set"),
+    { ...entry, id: "other-entry", rationale: "另一份同谱人工判断" });
+  writeHarmonyDraft(local, scope, original);
+  const before = local.getItem(harmonyStorageKey(sha));
+  const blocked = { ...local, setItem() { throw Error("QuotaExceededError"); } };
+  const failed = replaceHarmonyDraft(blocked, scope, original, imported);
+  assert.equal(failed.stored, false);
+  assert.strictEqual(failed.value, original);
+  assert.equal(local.getItem(harmonyStorageKey(sha)), before);
+  assert.strictEqual(replaceHarmonyDraft(null, scope, original, imported).value, original);
+  const succeeded = replaceHarmonyDraft(local, scope, original, imported);
+  assert.equal(succeeded.stored, true);
+  assert.deepEqual(readHarmonyDraft(local, scope), imported);
+});
+
+test("pitch basis is locked after the first judged event, but not after unclear-only entries", () => {
+  const judged = saveHarmonyEntry(scope, blank, entry);
+  assert.throws(() => updateHarmonyPackage(scope, judged, { pitch_basis: "concert" }), /音高基准已锁定/);
+  assert.equal(judged.pitch_basis, "written");
+  assert.equal(judged.entries[0].events[0].root, "C");
+  const unclear = saveHarmonyEntry(scope, blank, { ...entry, assessment: "unclear", events: [], unclear_reason: "尚未核定" });
+  assert.equal(updateHarmonyPackage(scope, unclear, { pitch_basis: "concert" }).pitch_basis, "concert");
+  assert.equal(updateHarmonyPackage(scope, updateHarmonyPackage(scope, judged, { entries: [] }), { pitch_basis: "concert" }).pitch_basis, "concert");
 });

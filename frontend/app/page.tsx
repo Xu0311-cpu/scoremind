@@ -6,7 +6,7 @@ import ScorePreview from "./ScorePreview";
 import WrittenMeasureNavigator from "./WrittenMeasureNavigator";
 import ExpertReview from "./ExpertReview";
 import HarmonicAnnotation from "./HarmonicAnnotation";
-import { MAX_HARMONY_BYTES, createHarmonyPackage, parseHarmonyPackage, readHarmonyDraft, saveHarmonyEntryWithStorage, updateHarmonyPackage, validateHarmonyPackage, writeHarmonyDraft, type HarmonyEntry, type HarmonyPackage, type HarmonyScope } from "./harmonicAnnotations";
+import { MAX_HARMONY_BYTES, createHarmonyPackage, parseHarmonyPackage, readHarmonyDraft, replaceHarmonyDraft, saveHarmonyEntryWithStorage, updateHarmonyPackage, validateHarmonyPackage, writeHarmonyDraft, type HarmonyEntry, type HarmonyPackage, type HarmonyScope } from "./harmonicAnnotations";
 import { readRevealMarker, requestMachineReveal } from "./harmonicReveal";
 import type { VerifiedScoreStructure } from "./scoreStructure";
 import { MAX_REVIEW_BYTES, deleteReviewRecord, parseReviewPackage, readReviewDraft, reviewScopeFromTimeline, serializeReviewPackage, upsertReviewRecord, writeReviewDraft, type ReviewRecord, type ReviewScope } from "./reviewRecords";
@@ -730,11 +730,16 @@ export default function Home() {
   }
 
   function confirmHarmonyImport() {
-    if (!pendingHarmonyImport || !harmonyScope) return;
+    if (!pendingHarmonyImport || !harmonyScope || !harmonyPackage) return;
     try {
-      const next = validateHarmonyPackage(pendingHarmonyImport, harmonyScope);
-      try { writeHarmonyDraft(window.localStorage, harmonyScope, next); keepHarmonyInMemory(next, false); }
-      catch { keepHarmonyInMemory(next, true); }
+      let storage: Storage | null = null;
+      try { storage = window.localStorage; } catch { /* Import cannot commit without storage. */ }
+      const result = replaceHarmonyDraft(storage, harmonyScope, harmonyPackage, pendingHarmonyImport);
+      if (!result.stored) {
+        setHarmonyMessage("导入写入失败：原草稿、当前表单和待确认导入均保持不变。请检查浏览器存储空间或权限后重试。");
+        return;
+      }
+      keepHarmonyInMemory(result.value, false);
       setPendingHarmonyImport(null);
       setHarmonyImportRevision((revision) => revision + 1);
     } catch (err) { setHarmonyMessage(err instanceof Error ? err.message : "人工和声导入失败。"); }
