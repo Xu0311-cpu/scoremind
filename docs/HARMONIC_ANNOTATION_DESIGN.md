@@ -10,10 +10,16 @@
 
 ## 独立性与工作流
 
-1. 上传现有 MusicXML/XML，记录原始字节 SHA-256；从可信的书面小节顺序建立导航，显示乐谱预览。**首次填写阶段隐藏机器和声、罗马数字和功能结果**；不从机器字段预填任何人工判断。显示小节号只作辅助文案，主键始终为 1 起的 `measure_index`。
-2. 每份 JSON 是一个校审者的一份标注集。校审者对每小节选择 `determined`（位置均已明确）、`partial`（仅部分位置明确）或 `unclear`（无足够依据）。明确事件必须附原谱依据；不明确必须附具体原因。先保存并提示导出首次人工标注，再可主动查看机器分析作对照；查看之后新增或修改的条目必须标记为 `machine_visible`，不得伪称为首次独立标注。v1 不提供不可篡改的历史：覆盖编辑会失去原先的本地独立版本，因此编辑前必须提示导出快照；不具备原快照时不能重建先前判断。
+1. 上传现有 MusicXML/XML，记录原始字节 SHA-256；从可信的书面小节顺序建立导航，显示乐谱预览。**首次填写阶段只显示乐谱及人工标注，不挂载任何已有机器分析视图**；不从机器字段预填人工判断。显示小节号只作辅助文案，主键始终为 1 起的 `measure_index`。
+2. 每份 JSON 是一个校审者的一份标注集。校审者对每小节选择 `determined`（**仅已录事件**有明确判断，不声明整小节已穷尽）、`partial`（已录事件明确，但已知仍有未解决位置）或 `unclear`（无已确定事件）。明确事件必须附原谱依据；不明确必须附具体原因。先保存并提示导出首次人工标注，再可主动查看机器分析作对照；查看之后新增或修改的条目必须标记为 `machine_visible`，不得伪称为首次独立标注。已保存且未修改的旧条目不因后来查看机器结果而追溯降级。v1 不提供不可篡改的历史：覆盖编辑会失去原先的本地独立版本，因此编辑前必须提示导出快照；不具备原快照时不能重建先前判断。
 3. `score_only_attested` 是校审者对“填写时未看机器结果”的**自我声明**，不是防篡改证明。刷新页面或导入外部包不能证明其真实先后；UI 必须如实说明。即使自我声明独立，本轮也不自动把它升格为金标准或计算准确率。
 4. 本地草稿与原有人工意见使用不同状态变量、不同 `localStorage` 键、不同 JSON `format`。新包不写入分析 API、解释请求、学习报告、旧校审 JSON 或算法置信度。禁用存储、配额不足或隐私模式时保留当前页面内存、显示风险并提示导出，不声称云同步。
+
+### 全页面盲态与单向揭示
+
+- 盲态只保留输入说明、上传、原谱预览、人工标注及不含机器判断的书面小节导航。现有 **Student Analysis（含 Process Explanation/Measure Walkthrough）、Technical Evidence（含时间轴/来源与诊断）、Generate Explanation 及结果、Learning Report 的预览/复制/下载、现有 `ExpertReview` 校审及其计数**均须由同一个状态闸门禁止挂载；不只是 CSS 隐藏，不能从 DOM/辅助技术读取先前或当前文件的机器结论。即使时间轴观察本身不是和声判断，本轮也统一遮蔽，避免绕过盲态。更换文件时清除内存中的旧分析/解释/报告显示，再按新指纹加载状态。
+- 唯一的“查看机器结果”动作（含现有 `Analyze`，以及任何能生成、打开、复制或下载机器解释/报告的入口）必须**先**将该原始文件指纹的 `machine_revealed=true` 持久写入 `scoremind:independent-harmony:revealed:v1:<file_sha256>`，再渲染或触发可能露出机器判断的动作；不得让其他按钮或快捷路径绕过。首次点击 Analyze 即视为已查看，即使请求随后失败，这是有意保守的。标注页与机器页共享该闸门，不能用视图切换重置。
+- 刷新或重新上传**同一字节文件**时，先读取上述标志，再启用编辑；标志为 true 则新建/编辑条目只能是 `machine_visible`。`Reset`、切换到其他谱、重新 Analyze、关闭面板都不能清除同一文件的已查看标志。若浏览器存储不可读或写入失败，不能可靠证明刷新前的状态：**禁用 `score_only_attested` 保存和机器结果揭示**，允许内存中继续写 `machine_visible` 记录并提示导出；绝不先展示机器内容、后补写标志。外部曾查看结果或手动清除/篡改本地存储无法自动侦测，`score_only_attested` 仍只是显式自述而非可验证证明。
 
 ## JSON 契约 v1
 
@@ -32,21 +38,21 @@
 | `entries[].id` | 唯一、稳定，1–80 字符，字母/数字/连字符 | 编辑不改 ID；禁止重复 |
 | `entries[].measure_index` | `1..measure_count` | 按**书面顺序**，绝不按显示编号或数组猜测 |
 | `entries[].basis` | `score_only_attested` 或 `machine_visible` | 记录填写/最后编辑时是否已显示机器结果；导入值仅为自述 |
-| `entries[].assessment` | `determined`、`partial`、`unclear` | 不等于机器置信度，也不等于旧校审的正确/错误 |
+| `entries[].assessment` | `determined`、`partial`、`unclear` | `determined` 仅表示已录事件明确，**不声明小节完整覆盖**；不等于机器置信度或旧校审的正确/错误 |
 | `entries[].events` | 数组；见下文 | 该小节内已明确的人工和声事件；可多于一个 |
 | `entries[].unclear_reason` | 字符串或 null；最大 2000 字符 | `partial`、`unclear` 时为非空；`determined` 时必须为 null |
 | `entries[].rationale` | 去空白后非空，最大 2000 字符 | 小节级依据、保留的歧义和乐理前提 |
 | `entries[].created_at/updated_at` | UTC ISO 8601 毫秒字符串 | 可复核修改时间；`updated_at >= created_at` |
 | `events[].offset_qn` | 规范约分非负分数字符串 | 从该书面小节起点计，单位四分音符；如 `"0"`、`"2/3"` |
 | `events[].label` | 去空白后 1–120 字符 | 人工和声描述，不被强行映射到机器支持集合 |
-| `events[].root` | `A`–`G` 加可选 `#`/`b`，或 null | 校审者明确给出的记谱拼写；null 表示未判断此字段 |
+| `events[].root` | `A`–`G` 加可选 `#`/`b`，或 null | 校审者按包级 `pitch_basis` 明确给出的音高拼写；null 表示未判断此字段 |
 | `events[].quality` | 现有基础和弦质量枚举，或 null | null 可用于其他和声；自由描述保留在 `label` |
 | `events[].roman_numeral` | 去空白后 1–40 字符，或 null | 必须有人工写明的调性参照；null 不是机器识别失败 |
 | `events[].key_context` | 去空白后 1–80 字符，或 null | Roman numeral 非 null 时必填，明示其参考调性；不借用机器全局调性 |
 | `events[].harmonic_function` | `tonic`、`predominant`、`dominant`、`unknown`，或 null | 仅为校审者明确给出的字段；null 不等于 unknown |
 | `events[].evidence` | 去空白后非空，最大 2000 字符 | 直接指向乐谱的文字依据，如声部、记谱音、拍点；不靠机器事件 ID 填写 |
 
-`entries` 按 `measure_index` 严格递增，同一小节不可重复。`determined` 至少一个 event，`unclear_reason=null`；`partial` 至少一个 event 且有不明确原因；`unclear` 必须 `events=[]` 且有不明确原因。同一条记录的 `events[].offset_qn` 严格递增且不可重复。分数须为约分后的整数或 `正分子/正分母`，分母大于 1，整数 `0` 唯一表示零；拒绝负值、浮点、`0/1`、`2/4`、前导零及零分母。`quality` 枚举拟沿用现有 `major/minor/diminished/augmented/dominant_seventh/major_seventh/minor_seventh/half_diminished_seventh/diminished_seventh/minor_major_seventh`，但**不要求**专业判断落入这个集合；无法表达时保留自由 `label`、`quality=null`。罗马数字若缺明确的人工调性上下文必须为 null。移调乐器、跨谱表歧义和时间轴 `partial/unsupported` 不得用看似精确的机器字段填空。
+`entries` 按 `measure_index` 严格递增，同一小节不可重复。`determined` 至少一个 event，`unclear_reason=null`，但**不提供整小节覆盖证明**；`partial` 至少一个 event 且有已知未解决位置的原因；`unclear` 必须 `events=[]` 且有不明确原因。漏录的第二事件不能据此变成机器漏报、召回率分母或完整和声预期；将来若要评估漏报，须另有独立核定的覆盖范围与对齐规则。同一条记录的 `events[].offset_qn` 严格递增且不可重复。分数须为约分后的整数或 `正分子/正分母`，分母大于 1，整数 `0` 唯一表示零；拒绝负值、浮点、`0/1`、`2/4`、前导零及零分母。`quality` 枚举拟沿用现有 `major/minor/diminished/augmented/dominant_seventh/major_seventh/minor_seventh/half_diminished_seventh/diminished_seventh/minor_major_seventh`，但**不要求**专业判断落入这个集合；无法表达时保留自由 `label`、`quality=null`。罗马数字若缺明确的人工调性上下文必须为 null。移调乐器、跨谱表歧义和时间轴 `partial/unsupported` 不得用看似精确的机器字段填空。
 
 精确时间需以独立于和声结论的可靠 MusicXML 书面结构核验：`0 <= offset_qn < measure_duration_qn`，无拍点或结构无法可靠定位时只允许整小节 `unclear`/理由，不能猜测 offset。`pitch_basis` 固定一份标注集的音高基准；未来比较时若机器与人工基准不一致，则记 `not_evaluated`，本轮不实现移调换算。`file_sha256` 与已核实的小节数共同校验身份；来源音符 ID **不作为 v1 必填字段**，因为盲标注不能依赖机器时间轴 ID。若标注者在证据文本中写 ID，它只是文字，不自动建立可机器校验的来源关系。
 
@@ -60,9 +66,9 @@
 
 ## 评估门槛与复审决策
 
-MVP 3.11 **只收集和复核标注，不计算自动准确率**。将来若设计离线比较：需有已核实的独立标注、明确的人工事件 offset、同一文件指纹、同一书面索引、可比的音高基准/调性语境及预先定义的字段级对齐规则；无标注、`unclear`、`machine_visible`、无法对齐的多和弦或 null 字段都记 `not_evaluated`，不进分母。多位标注者意见保留为不同包，冲突不投票变成机器真值。任何准确率算法须另行复审，不属于本设计阶段。
+MVP 3.11 **只收集和复核标注，不计算自动准确率**。将来若设计离线比较：需有已核实的独立标注、明确的人工事件 offset、同一文件指纹、同一书面索引、可比的音高基准/调性语境及预先定义的字段级对齐规则；无标注、`unclear`、`machine_visible`、无法对齐的多和弦、null 字段及**未证实完整覆盖时的漏报推断**都记 `not_evaluated`，不进分母。多位标注者意见保留为不同包，冲突不投票变成机器真值。任何准确率算法须另行复审，不属于本设计阶段。
 
-请复审重点确认：①一份标注集每书面小节一条、内部可多事件；②`score_only_attested` 仅是声明，查看机器后的编辑降为 `machine_visible`；③v1 不绑定分析版本、不引用机器来源 ID；④本轮不计算准确率。这四项确认后再实施。
+请复审重点确认：①一份标注集每书面小节一条、内部可多事件，`determined` 不保证穷尽；②所有机器输出入口共用单向揭示闸门，刷新同文件后仍生效，`score_only_attested` 仅是声明；③v1 不绑定分析版本、不引用机器来源 ID；④本轮不计算准确率。这四项确认后再实施。
 
 ## 复审通过后的实施顺序（本提交不执行）
 
