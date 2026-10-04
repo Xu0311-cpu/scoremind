@@ -6,6 +6,8 @@ import ScorePreview from "./ScorePreview";
 import WrittenMeasureNavigator from "./WrittenMeasureNavigator";
 import ExpertReview from "./ExpertReview";
 import HarmonicAnnotation from "./HarmonicAnnotation";
+import HarmonicComparison from "./HarmonicComparison";
+import { buildHarmonicComparison, canMountHarmonicComparison } from "./comparisonRules";
 import { MAX_HARMONY_BYTES, createHarmonyPackage, parseHarmonyPackage, readHarmonyDraft, replaceHarmonyDraft, saveHarmonyEntryWithStorage, updateHarmonyPackage, validateHarmonyPackage, writeHarmonyDraft, type HarmonyEntry, type HarmonyPackage, type HarmonyScope } from "./harmonicAnnotations";
 import { readRevealMarker, requestMachineReveal } from "./harmonicReveal";
 import type { VerifiedScoreStructure } from "./scoreStructure";
@@ -285,6 +287,7 @@ export default function Home() {
   const [file, setFile] = useState<File | null>(null);
   const [musicXmlText, setMusicXmlText] = useState<string | null>(null);
   const [analysis, setAnalysis] = useState<MusicXMLAnalysisResponse | null>(null);
+  const [analysisFingerprint, setAnalysisFingerprint] = useState<string | null>(null);
   const [explanation, setExplanation] = useState<ExplanationResponse | null>(null);
   const [loadingAnalysis, setLoadingAnalysis] = useState(false);
   const [loadingExplanation, setLoadingExplanation] = useState(false);
@@ -369,6 +372,12 @@ export default function Home() {
   const harmonyScope = useMemo<HarmonyScope | null>(() => fileFingerprint && scoreStructure
     ? { file_sha256: fileFingerprint, measure_durations_qn: scoreStructure.measure_durations_qn }
     : null, [fileFingerprint, scoreStructure]);
+  const harmonyComparison = useMemo(() => analysis ? buildHarmonicComparison({
+    revealed: machineRevealed,
+    currentSha: fileFingerprint, analysisSha: analysisFingerprint, structure: scoreStructure,
+    annotations: harmonyPackage, measures: analysis.measures, timeline: analysis.notated_timeline,
+    selectedIndex: selectedMeasureIndex,
+  }) : null, [analysis, analysisFingerprint, fileFingerprint, scoreStructure, harmonyPackage, selectedMeasureIndex, machineRevealed]);
 
   useEffect(() => {
     if (!harmonyScope) return;
@@ -396,6 +405,11 @@ export default function Home() {
     setNavigationToken((token) => token + 1);
   }
 
+  function openReviewForMeasure(index: number) {
+    selectWrittenMeasure(index);
+    window.requestAnimationFrame(() => document.getElementById("expert-review")?.scrollIntoView({ behavior: "smooth", block: "start" }));
+  }
+
   function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
     const selectedFile = event.target.files?.[0] ?? null;
     if (selectedFile && !isSupportedFile(selectedFile.name)) {
@@ -412,6 +426,7 @@ export default function Home() {
     setSelectedMeasureIndex(null);
     setLoadingAnalysis(false);
     setAnalysis(null);
+    setAnalysisFingerprint(null);
     setExplanation(null);
     setMarkdownReport("");
     setCopyMessage(null);
@@ -488,6 +503,7 @@ export default function Home() {
     const generation = analysisGenerationRef.current;
     setError(null);
     setAnalysis(null);
+    setAnalysisFingerprint(null);
     setSelectedMeasureIndex(null);
     setExplanation(null);
     setMarkdownReport("");
@@ -513,6 +529,7 @@ export default function Home() {
       const payload = await response.json();
       if (analysisGenerationRef.current === generation) {
         setAnalysis(payload);
+        setAnalysisFingerprint(fingerprint);
         setSelectedMeasureIndex(initialMeasureIndex(payload.notated_timeline));
         const scope = reviewScopeFromTimeline(fingerprint ?? "", payload.analysis_version, payload.notated_timeline);
         setReviewScope(scope);
@@ -572,6 +589,7 @@ export default function Home() {
     setFile(null);
     setMusicXmlText(null);
     setAnalysis(null);
+    setAnalysisFingerprint(null);
     setExplanation(null);
     setMarkdownReport("");
     setCopyMessage(null);
@@ -800,7 +818,7 @@ export default function Home() {
       <section className="workspace">
         <header className="page-header">
           <div>
-            <p className="eyebrow">MVP 3.11</p>
+            <p className="eyebrow">MVP 3.12</p>
             <h1>ScoreMind</h1>
             <p className="product-subtitle">AI Music Score Understanding</p>
           </div>
@@ -880,7 +898,7 @@ export default function Home() {
               ) : (
                 <div className="unsupported-source-note">
                   <p>
-                    This source is guidance-only in MVP 3.11. The runtime upload control still accepts only
+                    This source is guidance-only in MVP 3.12. The runtime upload control still accepts only
                     {" "}.musicxml and .xml files after you export or convert externally.
                   </p>
                 </div>
@@ -901,7 +919,11 @@ export default function Home() {
                 onImport={importHarmony} onExport={exportHarmony} pendingCount={pendingHarmonyImport?.entries.length ?? null}
                 onConfirmImport={confirmHarmonyImport} onCancelImport={() => setPendingHarmonyImport(null)}
                 message={harmonyMessage} unavailableReason={fingerprintFailed ? "文件指纹计算失败；独立标注不可用，但普通 Analyze 仍可经确认继续。" : structureReason} />
-              {machineRevealed && analysis && <ExpertReview key={`${reviewScope?.file_sha256 ?? "unavailable"}:${selectedMeasureIndex}`} scope={reviewScope} selectedMeasureIndex={selectedMeasureIndex} records={reviewRecords} onSelectMeasureIndex={selectWrittenMeasure} onSave={saveReview} onDelete={removeReview} onImport={importReviews} onExport={exportReviews} pendingImportCount={pendingReviewImport?.length ?? null} onConfirmImport={confirmReviewImport} onCancelImport={() => setPendingReviewImport(null)} message={reviewMessage} />}
+              {machineRevealed && analysis && !canMountHarmonicComparison(machineRevealed, true, fileFingerprint, analysisFingerprint) &&
+                <p role="status" className="timeline-caution">不可直接比较：原文件指纹缺失或与机器结果不一致。</p>}
+              {canMountHarmonicComparison(machineRevealed, !!analysis, fileFingerprint, analysisFingerprint) && harmonyComparison &&
+                <HarmonicComparison result={harmonyComparison} reviewAvailable={!!reviewScope} onOpenReview={openReviewForMeasure} />}
+              {machineRevealed && analysis && <div id="expert-review"><ExpertReview key={`${reviewScope?.file_sha256 ?? "unavailable"}:${selectedMeasureIndex}`} scope={reviewScope} selectedMeasureIndex={selectedMeasureIndex} records={reviewRecords} onSelectMeasureIndex={selectWrittenMeasure} onSave={saveReview} onDelete={removeReview} onImport={importReviews} onExport={exportReviews} pendingImportCount={pendingReviewImport?.length ?? null} onConfirmImport={confirmReviewImport} onCancelImport={() => setPendingReviewImport(null)} message={reviewMessage} /></div>}
             </>
           )}
         </section>
