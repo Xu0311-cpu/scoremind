@@ -65,6 +65,7 @@ ScoreMind 是面向音乐学习者的确定性 MusicXML 乐谱分析系统。当
 - `frontend/app/ExpertReview.tsx`、`frontend/app/reviewRecords.ts`：人工校审界面、独立 JSON 契约及严格导入校验；与分析 API 分开。
 - `frontend/app/HarmonicAnnotation.tsx`、`frontend/app/harmonicAnnotations.ts`、`frontend/app/harmonicReveal.ts`：独立人工和声记录、v1 JSON 契约与机器结果揭示闸门；`scoreStructure.ts` 从原谱/OSMD 核对书面小节结构。
 - `frontend/app/annotationProgress.ts`：只读人工标注状态统计与书面索引跳转；不读取机器结果或旧校审意见。
+- `frontend/app/annotationDrafts.ts`：仅当前页面内按书面索引保存未提交表单字段，防止小节导航丢稿；不是独立 JSON 包或浏览器持久草稿。
 - `frontend/app/HarmonicComparison.tsx`、`frontend/app/comparisonRules.ts`：3.12 揭示后的只读人工对照与保守身份/位置门槛；不输出新和声结论。
 - `backend/tests/fixtures/professional/`、`backend/tests/test_professional_validation.py`、`docs/PROFESSIONAL_VALIDATION.md`：带 CC0 来源的真实短节选、固定结构预期及 API 回归。
 - `frontend/public/samples/`：可下载演示样例，不代表转换能力。

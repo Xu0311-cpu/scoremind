@@ -89,7 +89,7 @@ OpenSheetMusicDisplay renders the uploaded MusicXML text in the browser. This pr
 
 ### MVP 3.13 人工标注状态导航
 
-MVP 3.13 的 `annotationProgress.ts` 是独立人工标注包的只读投影：以 OSMD 已核实的书面小节索引列出未标注/`unclear`/`partial`/`determined`，并单独计数 `score_only_attested` 与 `machine_visible`。`HarmonicAnnotation.tsx` 用状态筛选和前后/直接跳转调用页面原有的书面小节选择函数。显示编号不用于索引，重复编号仍是不同位置。导入、编辑、删除及同文件草稿恢复后，从当前 SHA-256 绑定的包重算，不另存进度；组件只接收与当前指纹匹配的包。它不读取机器分析、旧校审记录或学习报告。`determined` 不表示整小节穷尽，盲标注声明未被验证为金标准；进度不是准确率。发布版 `3.13.0` 保留 `analysis_version=3.11.0` 及独立人工包 v1。
+MVP 3.13 的 `annotationProgress.ts` 是独立人工标注包的只读投影：以 OSMD 已核实的书面小节索引列出未标注/`unclear`/`partial`/`determined`，并单独计数 `score_only_attested` 与 `machine_visible`。`HarmonicAnnotation.tsx` 用状态筛选和前后/直接跳转调用页面原有的书面小节选择函数。显示编号不用于索引，重复编号仍是不同位置。导入、编辑、删除及同文件草稿恢复后，从当前 SHA-256 绑定的包重算，不另存进度；组件只接收与当前指纹匹配的包。`annotationDrafts.ts` 将**未保存**的表单字段按书面索引保存在当前页面内存，因此新旧下拉与谱面/技术证据共用导航都可返回原编辑；成功保存、删除或组件因换谱/导入而重置时清理，不把内存编辑当作 JSON 草稿或跨刷新持久数据。它不读取机器分析、旧校审记录或学习报告。`determined` 不表示整小节穷尽，盲标注声明未被验证为金标准；进度不是准确率。发布版 `3.13.0` 保留 `analysis_version=3.11.0` 及独立人工包 v1。
 
 ### MVP 3.12 人工对照视图
 
