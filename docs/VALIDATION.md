@@ -2,11 +2,11 @@
 
 ## MVP 3.12 人工对照视图验证
 
-规则与验收矩阵见 [`HARMONIC_COMPARISON.md`](HARMONIC_COMPARISON.md)。基线 `main/50dbc1c`：后端 94 项、前端 29 项、前端构建通过。实施后 Python 3.13 后端 **94 项通过**（环境既有 RequestsDependencyWarning 1 条），前端 Node 内置测试 **35 项通过**，`npm run build` 通过。新增规则测试覆盖盲态闸门、原文件 SHA、重复显示编号但不同书面索引、多乐器网格缺口、未标注/`unclear`、多事件、多机器和弦、不同音高基准、`partial/unsupported`、字段和来源缺失；测试不把位置可核对误称为正确，也不计算准确率。
+规则与验收矩阵见 [`HARMONIC_COMPARISON.md`](HARMONIC_COMPARISON.md)。基线 `main/50dbc1c`：后端 94 项、前端 29 项、前端构建通过。复审加固后 Python 3.13 后端 **94 项通过**（环境既有 RequestsDependencyWarning 1 条），前端 Node 内置测试 **37 项通过**，`npm run build` 通过。新增规则测试覆盖盲态闸门、原文件 SHA、重复显示编号但不同书面索引、多乐器网格缺口、原谱时值与时间轴累计边界的精确分数匹配、未标注/`unclear`、多事件、多机器和弦、不同音高基准、`partial/unsupported`、字段和来源缺失；测试不把位置可核对误称为正确，也不计算准确率。应用发布版 `3.12.0`，未变化的确定性 `analysis_version` 保持 `3.11.0`；新增回归以 3.11 版本键保存校审草稿，并验证同键读取和 JSON 导入往返。
 
 本地浏览器在功能代码完成、版本文案更新前使用真实 `c_major_inversions.musicxml`：Analyze 前 DOM/辅助技术快照没有对照区、Student Analysis 或旧校审；保存独立 `unclear` 条目后揭示机器结果，对照区如实显示人工不明确、机器同起点和弦及 `partial` 时间轴，并标“不可直接比较”。从书面第 3 小节点击“前往人工意见”，旧 ExpertReview 预选第 3 小节且记录数仍为 0。刷新、重传同字节文件后，揭示历史使新编辑为 `machine_visible`，但重新 Analyze 前不挂载对照。改传 `timeline_meter_tuplets.musicxml` 后旧谱对照立即卸载；两个原谱显示号均为 `1` 的书面第 2、3 小节可分别选择。390px 视口实测页面 `scrollWidth=clientWidth=390`，对照按钮高度 44px，分栏堆叠且长文案换行；随后恢复默认视口。
 
-3.11 合并后冒烟：上述真实谱例能保存独立人工条目，揭示后旧学生/技术/校审视图仍可用，旧校审未被自动写入；沿用 3.11 验证记录中系统 Edge 的独立 JSON 实际下载落盘及同文件重新导入结果。版本文案更新后，最初开发服务器与 `npm run build` 共用 `.next` 输出目录，浏览器只加载到无交互脚本的页面；重启开发服务器后，在系统 Edge 重新上传真实 `c_major_inversions.musicxml` 并点击 Analyze，页面显示 `MVP 3.12`、机器分析版本 `3.12.0`、独立标注填写状态 `machine_visible`，对照区显示人工空标注、机器 C major、时间轴 `partial` 及“不可直接比较”，旧校审仍为 0。此为完整 3.12 浏览器上传冒烟；前述无脚本状态是本地开发/构建并行造成的验收环境问题。浏览器中未可靠注入 `localStorage` 配额/权限失败或 SHA-256 计算失败；这些 3.11 故障路径仍仅有单测，不能记为端到端通过。390px 指针操作不等于实体触屏硬件测试。
+3.11 合并后冒烟：上述真实谱例能保存独立人工条目，揭示后旧学生/技术/校审视图仍可用，旧校审未被自动写入；沿用 3.11 验证记录中系统 Edge 的独立 JSON 实际下载落盘及同文件重新导入结果。版本文案更新后，最初开发服务器与 `npm run build` 共用 `.next` 输出目录，浏览器只加载到无交互脚本的页面；重启开发服务器后，在系统 Edge 重新上传真实 `c_major_inversions.musicxml` 并点击 Analyze，对照区显示人工空标注、机器 C major、时间轴 `partial` 及“不可直接比较”。复审加固后又上传 `simple_chords.musicxml`，页面显示 `MVP 3.12`，分析后 ExpertReview 显示契约版本 `3.11.0`，人工 `unclear` 标注按相同 SHA 恢复，对照仍标不可直接比较。该浏览器对此谱原本没有 3.11 ExpertReview 意见，因此旧意见恢复/旧 JSON 可导入由上述同键及包往返测试证明，**未宣称浏览器观察到旧意见恢复**。前述无脚本状态是本地开发/构建并行造成的验收环境问题。浏览器中未可靠注入 `localStorage` 配额/权限失败或 SHA-256 计算失败；这些 3.11 故障路径仍仅有单测，不能记为端到端通过。390px 指针操作不等于实体触屏硬件测试。
 
 ## MVP 3.11 独立和声标注验证
 

@@ -4,7 +4,7 @@
 
 - 增加独立和声标注的**只读人工对照视图**。机器结果揭示后，按原文件 SHA-256 和书面小节身份核实，分栏展示人工判断、现有同起点和弦、记谱时间轴来源。歧义和不支持情况明确显示不可直接比较；不自动判定正确/错误、准确率或漏报率。
 - “前往人工意见”只预选当前书面小节并打开现有 ExpertReview；意见仍须用户明确保存。独立标注 v1 JSON、旧校审包和分析 API 均不改变，盲态不挂载对照 DOM。
-- 后端仅同步版本和提示到 `3.12.0`；乐理算法、时间轴、解释契约及 `.musicxml/.xml` 上传范围不变。见 [`HARMONIC_COMPARISON.md`](HARMONIC_COMPARISON.md) 和 [`VALIDATION.md`](VALIDATION.md)。
+- 应用与解释层发布版本为 `3.12.0`；确定性分析契约未改，`analysis_version` 保持 `3.11.0`，让按此版本存储的旧 ExpertReview 草稿与导出包继续可读。乐理算法、时间轴、解释契约及 `.musicxml/.xml` 上传范围不变。对照还以精确分数核对原谱每小节时值与时间轴累计边界。见 [`HARMONIC_COMPARISON.md`](HARMONIC_COMPARISON.md) 和 [`VALIDATION.md`](VALIDATION.md)。
 
 ## MVP 3.11 历史发布说明
 

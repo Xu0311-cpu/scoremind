@@ -278,7 +278,7 @@ def test_api_analyze_musicxml_returns_structured_json() -> None:
     payload = response.json()
     assert payload["file_name"] == "simple_chords.musicxml"
     assert payload["measure_count"] == 4
-    assert payload["analysis_version"] == "3.12.0"
+    assert payload["analysis_version"] == "3.11.0"
     assert payload["analysis_scope"] == [
         "musicxml_input_only",
         "same_offset_vertical_pitch_set",
@@ -470,7 +470,7 @@ def test_explain_analysis_returns_template_explanation_for_valid_analysis_json()
 
     assert explanation_response.status_code == 200
     payload = explanation_response.json()
-    assert payload["analysis_version"] == "3.12.0"
+    assert payload["analysis_version"] == "3.11.0"
     assert payload["explanation_version"] == "3.12.0"
     assert payload["language"] == "zh-CN"
     assert payload["level"] == "student"

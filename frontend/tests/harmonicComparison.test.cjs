@@ -6,8 +6,15 @@ const ts = require("typescript");
 
 const source = fs.readFileSync(path.join(__dirname, "../app/comparisonRules.ts"), "utf8");
 const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
+const fractionSource = fs.readFileSync(path.join(__dirname, "../app/harmonicAnnotations.ts"), "utf8");
+const fractionCompiled = ts.transpileModule(fractionSource, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
+const fractionMod = { exports: {} };
+new Function("module", "exports", fractionCompiled)(fractionMod, fractionMod.exports);
 const mod = { exports: {} };
-new Function("module", "exports", compiled)(mod, mod.exports);
+new Function("require", "module", "exports", compiled)((name) => {
+  assert.equal(name, "./harmonicAnnotations");
+  return fractionMod.exports;
+}, mod, mod.exports);
 const { buildHarmonicComparison, canMountHarmonicComparison } = mod.exports;
 
 const sha = "d954c063542c39b11ac271495c33d5a65ffd5b1c835b6cae81f0d1a0094531c5";
@@ -26,7 +33,7 @@ function input() {
       status: "complete", pitch_basis: "written",
       measures: [1, 2, 3].flatMap((index) => [1, 2].map((part_index) => ({
         measure_id: `p${part_index}:m${index}`, part_index, measure_index: index,
-        measure_number: index === 1 ? "0" : "1", start: String(index - 1), end: String(index),
+        measure_number: index === 1 ? "0" : "1", start: ["0", "1", "5"][index - 1], end: ["1", "5", "9"][index - 1],
       }))),
       source_notes: [{ note_id: "p1:m1:n1", measure_id: "p1:m1", pitch: "C4", start: "0", duration: "1" }],
       slices: [{ measure_ids: ["p1:m1", "p2:m1"] }], diagnostics: [],
@@ -69,6 +76,25 @@ test("file switch, absent hash and unverified measure grid refuse side-by-side d
   assert.equal(buildHarmonicComparison({ ...data, measures: data.measures.map((m) => ({ ...m, measure_index: null })) }).kind, "unavailable");
   const broken = { ...data.timeline, measures: data.timeline.measures.filter((m) => !(m.measure_index === 2 && m.part_index === 2)) };
   assert.equal(buildHarmonicComparison({ ...data, timeline: broken }).kind, "unavailable");
+});
+
+test("each written duration and cumulative boundary must match exact timeline fractions", () => {
+  const data = input();
+  assert.equal(buildHarmonicComparison(data).directlyComparable, true);
+  const wrongDuration = { ...data.structure, measure_durations_qn: ["4", "4", "4"] };
+  assert.match(buildHarmonicComparison({ ...data, structure: wrongDuration }).reason, /时值与时间轴边界不一致/);
+  const shifted = { ...data.timeline, measures: data.timeline.measures.map((measure) => measure.measure_index === 2
+    ? { ...measure, start: "2", end: "6" } : measure) };
+  assert.match(buildHarmonicComparison({ ...data, timeline: shifted }).reason, /第 2 小节.*时值/);
+  const fractional = {
+    ...data,
+    structure: { ...data.structure, measure_durations_qn: ["1/3", "2/3", "1"] },
+    timeline: { ...data.timeline, measures: data.timeline.measures.map((measure) => ({ ...measure,
+      start: ["0", "1/3", "1"][measure.measure_index - 1],
+      end: ["1/3", "1", "2"][measure.measure_index - 1],
+    })) },
+  };
+  assert.equal(buildHarmonicComparison(fractional).directlyComparable, true);
 });
 
 test("no annotation, unclear, multiple events and multiple machine chords are never auto-aligned", () => {

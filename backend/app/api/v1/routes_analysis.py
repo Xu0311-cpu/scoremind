@@ -98,7 +98,7 @@ MVP_WARNINGS = [
     "Confidence for non-chord tone candidates is never high in MVP 3.12.",
 ]
 
-ANALYSIS_VERSION = "3.12.0"
+ANALYSIS_VERSION = "3.11.0"
 ANALYSIS_SCOPE = [
     "musicxml_input_only",
     "same_offset_vertical_pitch_set",

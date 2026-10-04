@@ -118,4 +118,4 @@ def test_professional_excerpt_response_and_source_ids_are_repeatable():
     first = upload("mozart_k157_opening.musicxml")
     second = upload("mozart_k157_opening.musicxml")
     assert first["notated_timeline"] == second["notated_timeline"]
-    assert first["analysis_version"] == "3.12.0"
+    assert first["analysis_version"] == "3.11.0"

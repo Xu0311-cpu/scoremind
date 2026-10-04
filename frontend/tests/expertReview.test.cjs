@@ -53,6 +53,16 @@ test("draft reload is isolated by exact file fingerprint and analysis version", 
   assert.deepEqual(readReviewDraft(storage, reviewScopeFromTimeline(sha, "4.0.0", timeline)), []);
 });
 
+test("unchanged 3.11 analysis version keeps saved review drafts and exports usable", () => {
+  const previousScope = reviewScopeFromTimeline(sha, "3.11.0", timeline);
+  const currentScope = reviewScopeFromTimeline(sha, "3.11.0", timeline);
+  const storage = fakeStorage();
+  writeReviewDraft(storage, previousScope, [record]);
+  assert.deepEqual(readReviewDraft(storage, currentScope), [record]);
+  const exported = serializeReviewPackage(previousScope, [record]);
+  assert.deepEqual(parseReviewPackage(exported, currentScope).records, [record]);
+});
+
 test("wrong score, version, source ID and measure are refused before import", () => {
   const valid = createReviewPackage(scope, [record]);
   assert.throws(() => parseReviewPackage(JSON.stringify({ ...valid, file_sha256: otherSha }), scope), /指纹/);

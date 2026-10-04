@@ -1,4 +1,4 @@
-import type { HarmonyEntry, HarmonyPackage } from "./harmonicAnnotations";
+import { parseQuarterFraction, type HarmonyEntry, type HarmonyPackage } from "./harmonicAnnotations";
 import type { NotatedTimelineData } from "./NotatedTimeline";
 import type { VerifiedScoreStructure } from "./scoreStructure";
 
@@ -47,6 +47,10 @@ export function canMountHarmonicComparison(
   return revealed && hasAnalysis && !!currentSha && currentSha === analysisSha;
 }
 
+function sameQuarter(a: { n: bigint; d: bigint }, b: { n: bigint; d: bigint }): boolean {
+  return a.n * b.d === b.n * a.d;
+}
+
 export function buildHarmonicComparison(input: ComparisonInput): ComparisonResult {
   const { currentSha, analysisSha, structure, annotations, measures, timeline, selectedIndex } = input;
   if (!input.revealed) return { kind: "unavailable", reason: "机器结果尚未揭示。" };
@@ -67,12 +71,25 @@ export function buildHarmonicComparison(input: ComparisonInput): ComparisonResul
   }
   const parts = new Set(timeline.measures.filter((measure) => measure.measure_index === 1).map((measure) => measure.part_index));
   if (!parts.size) return { kind: "unavailable", reason: "时间轴缺少书面小节来源。" };
+  let expectedStart = { n: BigInt(0), d: BigInt(1) };
   for (let index = 1; index <= count; index++) {
     const group = timeline.measures.filter((measure) => measure.measure_index === index);
     if (group.length !== parts.size || new Set(group.map((measure) => measure.part_index)).size !== parts.size
-        || group.some((measure) => !parts.has(measure.part_index) || measure.measure_number !== structure.measure_numbers[index - 1]
-          || measure.start !== group[0].start || measure.end !== group[0].end)) {
+        || group.some((measure) => !parts.has(measure.part_index) || measure.measure_number !== structure.measure_numbers[index - 1])) {
       return { kind: "unavailable", reason: `书面第 ${index} 小节的乐器网格或原谱标号不一致，不能并列展示。` };
+    }
+    try {
+      const duration = parseQuarterFraction(structure.measure_durations_qn[index - 1]);
+      if (duration.n === BigInt(0)) throw Error("zero measure duration");
+      const expectedEnd = { n: expectedStart.n * duration.d + duration.n * expectedStart.d,
+        d: expectedStart.d * duration.d };
+      const boundaries = group.map((measure) => ({ start: parseQuarterFraction(measure.start), end: parseQuarterFraction(measure.end) }));
+      if (boundaries.some(({ start, end }) => !sameQuarter(start, expectedStart) || !sameQuarter(end, expectedEnd))) {
+        throw Error("measure boundaries differ");
+      }
+      expectedStart = boundaries[0].end;
+    } catch {
+      return { kind: "unavailable", reason: `书面第 ${index} 小节的原谱时值与时间轴边界不一致，不能并列展示。` };
     }
   }
   const group = timeline.measures.filter((measure) => measure.measure_index === selectedIndex);
