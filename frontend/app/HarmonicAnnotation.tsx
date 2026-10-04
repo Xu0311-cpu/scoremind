@@ -3,7 +3,7 @@
 import { ChangeEvent, FormEvent, useState } from "react";
 import { HARMONY_FUNCTIONS, HARMONY_QUALITIES, type HarmonyEntry, type HarmonyEvent, type HarmonyPackage } from "./harmonicAnnotations";
 import { adjacentAnnotationIndex, filteredAnnotationPositions, summarizeAnnotationProgress, type AnnotationFilter, type AnnotationStatus } from "./annotationProgress";
-import { clearMeasureDraft, draftForMeasure, updateMeasureDraft, type AnnotationDraft, type AnnotationDrafts } from "./annotationDrafts";
+import { draftForMeasure, type AnnotationDraft, type AnnotationDrafts } from "./annotationDrafts";
 import type { VerifiedScoreStructure } from "./scoreStructure";
 
 const STATUS_LABELS: Record<AnnotationStatus, string> = {
@@ -89,12 +89,16 @@ function EntryEditor({ measureIndex, entry, machineVisible, draft, onDraftChange
 }
 
 export default function HarmonicAnnotation({ structure, value, selectedIndex, onSelectIndex, blindEligible, revealed,
-  onSaveEntry, onDeleteEntry, onMetadata, onImport, onExport, pendingCount, onConfirmImport, onCancelImport, message, unavailableReason }: {
+  drafts, unsavedCount, onDraftChange, onClearDraft, onSaveEntry, onDeleteEntry, onMetadata, onImport, onExport,
+  pendingCount, onConfirmImport, onCancelImport, message, unavailableReason }: {
   structure: VerifiedScoreStructure | null;
   value: HarmonyPackage | null;
   selectedIndex: number | null;
   onSelectIndex: (index: number) => void;
   blindEligible: boolean; revealed: boolean;
+  drafts: AnnotationDrafts; unsavedCount: number;
+  onDraftChange: (index: number, entry: HarmonyEntry | null, changes: Partial<AnnotationDraft>) => void;
+  onClearDraft: (index: number) => void;
   onSaveEntry: (entry: HarmonyEntry) => boolean;
   onDeleteEntry: (index: number) => void;
   onMetadata: (changes: Partial<Pick<HarmonyPackage, "reviewer_label" | "pitch_basis">>) => void;
@@ -108,7 +112,6 @@ export default function HarmonicAnnotation({ structure, value, selectedIndex, on
 }) {
   const [reviewer, setReviewer] = useState(value?.reviewer_label ?? "");
   const [statusFilter, setStatusFilter] = useState<AnnotationFilter>("all");
-  const [drafts, setDrafts] = useState<AnnotationDrafts>({});
   const entry = value?.entries.find((item) => item.measure_index === selectedIndex) ?? null;
   const machineVisible = revealed || !blindEligible || entry?.basis === "machine_visible";
   const pitchBasisLocked = value?.entries.some((item) => item.events.length > 0) ?? false;
@@ -126,7 +129,8 @@ export default function HarmonicAnnotation({ structure, value, selectedIndex, on
 
   return <section className="harmony-annotation" aria-labelledby="harmony-annotation-title">
     <h3 id="harmony-annotation-title">独立和声标注 / Independent Harmony Annotation</h3>
-    <p className="panel-note">只依据原谱记录人工判断，与机器分析及旧校审意见分开保存。不计算准确率；未录事件不代表机器漏报。未保存的编辑在本次页面内切换小节时保留，但刷新或换谱会丢失；保存后才进入浏览器草稿，非云同步。</p>
+    <p className="panel-note">只依据原谱记录人工判断，与机器分析及旧校审意见分开保存。不计算准确率；未录事件不代表机器漏报。未保存编辑在本页切换小节时保留；离页由浏览器原生提醒，换谱、重置或导入覆盖需确认。未保存字段不进入 JSON 或进度计数，非云同步。</p>
+    {unsavedCount > 0 && <p className="timeline-caution" role="status">{unsavedCount} 个书面小节有未保存编辑；请先保存编辑。仅导出正式记录不会备份未保存字段。</p>}
     {!value || !structure ? <p className="timeline-caution" role="status">{unavailableReason ?? "正在核对原文件 SHA-256 与书面小节结构；此前仍可使用普通 Analyze。"}</p> : <>
       <p className="panel-note">文件 SHA-256：<code className="review-fingerprint">{value.file_sha256}</code> · 书面小节 {value.measure_count} · 人工已录 {value.entries.length}。{machineVisible ? "新建/编辑只能标为 machine_visible。" : "目前仅看原谱；score_only_attested 仍只是自我声明。"}</p>
       {progress && <div className="annotation-progress" aria-label="独立人工标注状态导航">
@@ -165,7 +169,7 @@ export default function HarmonicAnnotation({ structure, value, selectedIndex, on
         </select></label>
       </div>
       {pitchBasisLocked && <p className="panel-note">已有人工和声事件，音高基准已锁定。要更换基准，请先导出备份并清空事件，或新建标注集。</p>}
-      <p className="panel-note">导出包含署名与人工依据，不含原始乐谱。导入仅接受同一原始文件指纹与同一书面小节数的 v1 包；替换前请备份草稿。</p>
+      <p className="panel-note">导出只包含已保存的署名与人工依据，不含原始乐谱或未保存编辑。导入仅接受同一原始文件指纹与同一书面小节数的 v1 包；替换前请先保存编辑，再导出正式记录备份。</p>
       <div className="review-actions"><button type="button" className="secondary-button" onClick={onExport}>导出独立标注 JSON</button>
         <label className="review-import">导入独立标注 JSON<input type="file" accept=".json,application/json" onChange={(e) => void importFile(e)} /></label></div>
       {pendingCount !== null && <div className="timeline-caution" role="status">已校验 {pendingCount} 个书面小节条目。确认将完整替换当前标注集，请先导出当前草稿。
@@ -177,8 +181,8 @@ export default function HarmonicAnnotation({ structure, value, selectedIndex, on
       {selectedIndex !== null && selectedIndex >= 1 && selectedIndex <= structure.measure_numbers.length &&
         <EntryEditor key={`${value.file_sha256}:${selectedIndex}:${entry?.updated_at ?? "new"}`} measureIndex={selectedIndex} entry={entry}
           machineVisible={machineVisible} draft={draftForMeasure(drafts, selectedIndex, entry)}
-          onDraftChange={(changes) => setDrafts((current) => updateMeasureDraft(current, selectedIndex, entry, changes))}
-          onClearDraft={() => setDrafts((current) => clearMeasureDraft(current, selectedIndex))}
+          onDraftChange={(changes) => onDraftChange(selectedIndex, entry, changes)}
+          onClearDraft={() => onClearDraft(selectedIndex)}
           onSave={onSaveEntry} onDelete={() => onDeleteEntry(selectedIndex)} />}
     </>}
     {message && <p className="timeline-caution" role="status">{message}</p>}

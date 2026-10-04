@@ -6,10 +6,10 @@ from app.schemas.analysis import DetectedChord, MusicXMLAnalysisResponse
 from app.schemas.explanation import ExplanationResponse, ExplanationSection
 
 
-EXPLANATION_VERSION = "3.13.0"
+EXPLANATION_VERSION = "3.14.0"
 EXPLANATION_WARNINGS = [
     "This explanation is template-generated from deterministic analysis output.",
-    "No LLM is called in MVP 3.13.",
+    "No LLM is called in MVP 3.14.",
     "Future LLM providers must not infer new music-theory conclusions.",
 ]
 

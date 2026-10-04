@@ -7,6 +7,8 @@ import WrittenMeasureNavigator from "./WrittenMeasureNavigator";
 import ExpertReview from "./ExpertReview";
 import HarmonicAnnotation from "./HarmonicAnnotation";
 import HarmonicComparison from "./HarmonicComparison";
+import { clearMeasureDraft, unsavedMeasureIndices, updateMeasureDraft, type AnnotationDrafts } from "./annotationDrafts";
+import { confirmDraftDiscard, guardFileSelection, restoreFileSelection } from "./annotationDiscard";
 import { buildHarmonicComparison, canMountHarmonicComparison } from "./comparisonRules";
 import { MAX_HARMONY_BYTES, createHarmonyPackage, parseHarmonyPackage, readHarmonyDraft, replaceHarmonyDraft, saveHarmonyEntryWithStorage, updateHarmonyPackage, validateHarmonyPackage, writeHarmonyDraft, type HarmonyEntry, type HarmonyPackage, type HarmonyScope } from "./harmonicAnnotations";
 import { readRevealMarker, requestMachineReveal } from "./harmonicReveal";
@@ -314,6 +316,19 @@ export default function Home() {
   const [harmonyMessage, setHarmonyMessage] = useState<string | null>(null);
   const [pendingHarmonyImport, setPendingHarmonyImport] = useState<HarmonyPackage | null>(null);
   const [harmonyImportRevision, setHarmonyImportRevision] = useState(0);
+  const [annotationDrafts, setAnnotationDrafts] = useState<AnnotationDrafts>({});
+  const unsavedAnnotationIndices = useMemo(() => unsavedMeasureIndices(annotationDrafts, harmonyPackage),
+    [annotationDrafts, harmonyPackage]);
+
+  useEffect(() => {
+    if (!unsavedAnnotationIndices.length) return;
+    const warnBeforeLeaving = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", warnBeforeLeaving);
+    return () => window.removeEventListener("beforeunload", warnBeforeLeaving);
+  }, [unsavedAnnotationIndices.length]);
 
   const detectedChordCount = useMemo(() => {
     if (!analysis) {
@@ -412,8 +427,14 @@ export default function Home() {
 
   function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
     const selectedFile = event.target.files?.[0] ?? null;
+    if (!selectedFile) {
+      if (file) restoreFileSelection(event.currentTarget, file);
+      return;
+    }
+    if (!guardFileSelection(event.currentTarget, file, unsavedAnnotationIndices.length > 0,
+      () => window.confirm("有尚未保存的人工和声编辑。继续将放弃这些编辑；正式标注记录不受影响。确定继续吗？"))) return;
     if (selectedFile && !isSupportedFile(selectedFile.name)) {
-      resetState();
+      resetStateUnchecked();
       setError("This file type is not supported. Please upload a .musicxml or .xml file. / 不支持此文件类型，请上传 .musicxml 或 .xml 文件。");
       return;
     }
@@ -448,6 +469,7 @@ export default function Home() {
     setHarmonyMessage(null);
     setPendingHarmonyImport(null);
     setHarmonyImportRevision(0);
+    setAnnotationDrafts({});
 
     if (selectedFile) {
       void loadMusicXmlText(selectedFile, fileGenerationRef.current);
@@ -582,7 +604,16 @@ export default function Home() {
     }
   }
 
+  function confirmDiscardDrafts(): boolean {
+    return confirmDraftDiscard(unsavedAnnotationIndices.length > 0,
+      () => window.confirm("有尚未保存的人工和声编辑。继续将放弃这些编辑；正式标注记录不受影响。确定继续吗？"));
+  }
+
   function resetState() {
+    if (confirmDiscardDrafts()) resetStateUnchecked();
+  }
+
+  function resetStateUnchecked() {
     fileGenerationRef.current += 1;
     analysisGenerationRef.current += 1;
     setFileRevision(fileGenerationRef.current);
@@ -613,6 +644,7 @@ export default function Home() {
     setHarmonyMessage(null);
     setPendingHarmonyImport(null);
     setHarmonyImportRevision(0);
+    setAnnotationDrafts({});
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -741,7 +773,7 @@ export default function Home() {
       const imported = parseHarmonyPackage(await fileToImport.text(), harmonyScope);
       if (generation !== fileGenerationRef.current) return;
       setPendingHarmonyImport(imported);
-      setHarmonyMessage("导入值仅是校审者声明，不证明未看机器结果；确认前请先导出现有草稿。");
+      setHarmonyMessage("导入值仅是校审者声明，不证明未看机器结果；未保存编辑不会进入导出文件，请先保存编辑，再导出正式记录备份。");
     } catch (err) {
       if (generation === fileGenerationRef.current) setHarmonyMessage(err instanceof Error ? err.message : "人工和声 JSON 导入失败；原草稿及表单未改变。");
     }
@@ -749,6 +781,7 @@ export default function Home() {
 
   function confirmHarmonyImport() {
     if (!pendingHarmonyImport || !harmonyScope || !harmonyPackage) return;
+    if (!confirmDiscardDrafts()) return;
     try {
       let storage: Storage | null = null;
       try { storage = window.localStorage; } catch { /* Import cannot commit without storage. */ }
@@ -759,6 +792,7 @@ export default function Home() {
       }
       keepHarmonyInMemory(result.value, false);
       setPendingHarmonyImport(null);
+      setAnnotationDrafts({});
       setHarmonyImportRevision((revision) => revision + 1);
     } catch (err) { setHarmonyMessage(err instanceof Error ? err.message : "人工和声导入失败。"); }
   }
@@ -818,7 +852,7 @@ export default function Home() {
       <section className="workspace">
         <header className="page-header">
           <div>
-            <p className="eyebrow">MVP 3.13</p>
+            <p className="eyebrow">MVP 3.14</p>
             <h1>ScoreMind</h1>
             <p className="product-subtitle">AI Music Score Understanding</p>
           </div>
@@ -898,7 +932,7 @@ export default function Home() {
               ) : (
                 <div className="unsupported-source-note">
                   <p>
-                    This source is guidance-only in MVP 3.13. The runtime upload control still accepts only
+                    This source is guidance-only in MVP 3.14. The runtime upload control still accepts only
                     {" "}.musicxml and .xml files after you export or convert externally.
                   </p>
                 </div>
@@ -916,6 +950,9 @@ export default function Home() {
                 value={harmonyPackage?.file_sha256 === fileFingerprint ? harmonyPackage : null}
                 selectedIndex={selectedMeasureIndex} onSelectIndex={selectWrittenMeasure}
                 blindEligible={blindEligible} revealed={machineRevealed}
+                drafts={annotationDrafts} unsavedCount={unsavedAnnotationIndices.length}
+                onDraftChange={(index, entry, changes) => setAnnotationDrafts((current) => updateMeasureDraft(current, index, entry, changes))}
+                onClearDraft={(index) => setAnnotationDrafts((current) => clearMeasureDraft(current, index))}
                 onSaveEntry={saveHarmony} onDeleteEntry={removeHarmonyEntry} onMetadata={updateHarmonyMetadata}
                 onImport={importHarmony} onExport={exportHarmony} pendingCount={pendingHarmonyImport?.entries.length ?? null}
                 onConfirmImport={confirmHarmonyImport} onCancelImport={() => setPendingHarmonyImport(null)}
