@@ -1,4 +1,16 @@
-# Validation Guide for MVP 3.12
+# Validation Guide for MVP 3.13
+
+## MVP 3.13 人工标注进度导航验证
+
+按书面小节索引分别显示未标注位置数和 `unclear`、`partial`、`determined` 人工记录数；`score_only_attested` 与 `machine_visible` 是**同批记录的另一维度**，不与状态数相加。`determined` 仅指已录事件明确，不能据此判整小节穷尽。盲标注是个人自述，不是独立验证的专业标准；本版不计算准确率或漏报率，不为无人工判断的谱例补造答案。
+
+推荐桌面及 390px 浏览器流程：上传获许可的 `backend/tests/fixtures/professional/beethoven_fur_elise_opening.musicxml`，确认弱起显示编号 `0` 对应书面第 1 小节，其余位置保持未标注，直到校审者实际填写。选一个书面位置明确填 `unclear` 并保存，确认计数及筛选跳转；如有独立人工判断，再测试 `partial`/`determined`，但不要把示例操作当真实音乐标准。导出 JSON、刷新后重新上传同一字节文件，检查恢复；同谱导入覆盖后进度更新，换成获许可的 `mozart_k80_opening.musicxml` 应只见其独立指纹下的草稿。重复显示标号须用结构性 `timeline_meter_tuplets.musicxml` 单独验证（它不是专业真实谱例）：两个标号为 `1` 的位置按书面索引分别跳转。390px 检查筛选、前后按钮、下拉触控目标和无页面横向溢出。真实触屏硬件与仅浏览器指针模拟须区分记录。
+
+自动测试以现有获许可短谱的实际小节顺序检验进度投影，以结构性重复编号 fixture 检验身份隔离，并覆盖同谱 JSON 导入、本地草稿恢复、不同指纹无草稿和状态更新。后端乐理算法、独立标注 JSON v1、旧校审和报告均不读取进度。
+
+本轮本地实测：Python 3.13 后端 **94 项通过**（环境既有 RequestsDependencyWarning 1 条），前端 Node 测试 **41 项通过**，`npm run build` 通过。Codex 内置浏览器上传获许可的 Beethoven 短节选：8 个书面位置初始均未标注；仅用注明“未作专业判断”的临时 `unclear` 流程记录验证 7/1 计数、筛选/前后跳转与刷新后同谱恢复。再用同指纹临时 JSON 覆盖，见填写基准从 1 条 `score_only_attested` 更新为 1 条 `machine_visible`；换到获许可的 K.80 短节选时为 8 个未标注位置、0 条记录。结构性 `timeline_meter_tuplets.musicxml` 的两个显示标号 `1` 分别为书面第 2/3 小节；在 390px 下可用选择框与按钮定位，页面横向溢出为 0。错谱导入报“指纹不匹配”，原进度不变。流程记录最后经界面删除，Beethoven 短节选恢复 8 个未标注位置。
+
+本次内置浏览器仅观察到导出触发提示，**未核对下载文件实际落盘后再导入**；同谱 JSON 导入使用临时测试文件，不能替代下载往返验收。390px 操作使用浏览器指针而非实体触屏硬件。没有专业音乐人实际判断，所有示例进度不作为准确率或金标准。
 
 ## MVP 3.12 人工对照视图验证
 

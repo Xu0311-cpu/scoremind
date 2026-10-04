@@ -1,12 +1,16 @@
-# ScoreMind — AI Music Score Understanding (MVP 3.12)
+# ScoreMind — AI Music Score Understanding (MVP 3.13)
 
 ScoreMind is a deterministic MusicXML score understanding tool for music students. It parses symbolic score data, analyzes basic harmony and note-level chord membership, renders a score preview, and turns the result into student-friendly learning views.
 
-Current release: MVP 3.12. Current score uploads remain limited to `.musicxml` and `.xml`.
+Current release: MVP 3.13. Current score uploads remain limited to `.musicxml` and `.xml`.
+
+MVP 3.13 adds a **human annotation progress navigator** beside the independent harmony form. It lists unannotated written positions and separate counts of `unclear`, `partial`, and `determined` human records; it also distinguishes `score_only_attested` from `machine_visible`. Filtering and Previous/Next use written measure indices, not printed numbers. These are record states, not harmonic accuracy or evidence that a `determined` measure was exhaustively annotated. An attested blind entry remains a reviewer self-declaration, not a verified professional gold standard. Imported and restored drafts recalculate the view for the same original-file SHA-256. No backend theory rules or annotation JSON fields change.
+
+The app and template explanation release is `3.13.0`; the unchanged deterministic `analysis_version` remains `3.11.0` to preserve older ExpertReview drafts and imports. The independent annotation format remains v1.
 
 MVP 3.12 adds a **read-only human comparison view** after the reviewer reveals machine results. It places the independent harmony annotation, same-written-measure machine chord output, and notated timeline evidence alongside one another only when the original-file SHA-256 and written-measure identity can be verified. Ambiguous or unsupported cases say they cannot be directly compared. A shortcut opens the existing ExpertReview form at that written measure; it never saves an opinion automatically. No verdict, accuracy metric, new harmony inference, or change to the independent annotation JSON is introduced. See [comparison rules and acceptance cases](docs/HARMONIC_COMPARISON.md).
 
-The app release is `3.12.0`, while the unchanged deterministic `analysis_version` remains `3.11.0`. This preserves existing ExpertReview drafts and JSON imports keyed to the analysis version; the template `explanation_version` is `3.12.0`.
+In MVP 3.12, the app and template explanation release was `3.12.0`, while the deterministic `analysis_version` stayed `3.11.0`. That version split continues in 3.13 and preserves existing ExpertReview drafts and JSON imports keyed to the analysis version.
 
 MVP 3.11 adds a **separate, browser-local independent harmony annotation** workflow. Reviewers can inspect the original score before revealing machine results, record manually judged events or explicit uncertainty per written measure, and export/import a strict versioned JSON package. It is bound to the original-file SHA-256 and verified written-measure structure, not to the machine analysis version. The old machine-review workflow remains separate. Once machine results are revealed, later edits are `machine_visible`, including after refresh when the marker survives. Storage or fingerprint failure never disables ordinary Analyze: session-only reveal requires explicit confirmation and cannot create a new blind claim. No annotations enter the API, explanation, Learning Report, or accuracy calculation. See the [contract](docs/HARMONIC_ANNOTATION_DESIGN.md) and [acceptance cases](docs/HARMONIC_ANNOTATION_ACCEPTANCE.md).
 
@@ -50,6 +54,7 @@ ScoreMind is not a chatbot. It is a structured score-understanding prototype bui
 - Navigate from Technical Evidence to the matching written score measure, with a visible staff-level outline when mapping is verified.
 - Record separate, file-bound human review notes by written measure and optional source note ID; export/import them as JSON.
 - Record independent human harmony judgments or uncertainty by verified written measure, separate from machine results and older machine-review notes.
+- Filter and navigate independent human annotation states by written measure; counts describe records and unannotated positions, never analysis accuracy.
 - Inspect per-written-measure counts of human review opinions and jump between uncertain/wrong measures without changing machine results.
 - Inspect written-duration slices and safe tie chains with traceable note sources in Technical Evidence.
 - Detect basic triads and seventh chords.
@@ -136,11 +141,11 @@ ScoreMind demonstrates an AI product architecture where domain reasoning is dete
 - If you use MuseScore or notation software, export MusicXML/XML first, then upload.
 - If you only have PDF, image, screenshot, or scanned paper, convert externally to MusicXML before using this MVP.
 - The Score Input Workspace explains these paths in the frontend, but it does not add PDF/image/MIDI/audio upload.
-- Input conversion is future work. MVP 3.12 keeps the runtime score upload path limited to MusicXML/XML.
+- Input conversion is future work. MVP 3.13 keeps the runtime score upload path limited to MusicXML/XML.
 
 ## Sample Files
 
-MVP 3.12 includes downloadable demo MusicXML files in `frontend/public/samples`:
+MVP 3.13 includes downloadable demo MusicXML files in `frontend/public/samples`:
 
 - `frontend/public/samples/c_major_progression.musicxml`: demonstrates global key, Roman numerals, harmonic functions, and Measure Walkthrough.
 - `frontend/public/samples/carried_context_notes.musicxml`: demonstrates note-level chord-tone labels and carried previous chord context.
@@ -151,7 +156,7 @@ In the frontend, use the `Try sample files` panel to download a sample, then upl
 
 - Backend deterministic analysis remains the source of truth.
 - Student Analysis is computed only from existing backend analysis JSON and does not infer new conclusions.
-- MusicXML/XML remains the only runtime score input path in MVP 3.12; review JSON import is a separate human annotation workflow.
+- MusicXML/XML remains the only runtime score input path in MVP 3.13; review JSON import is a separate human annotation workflow.
 - OMR feasibility work lives only in `docs/OMR_EXPERIMENT.md` and `experiments/omr`.
 - Input conversion, real LLM explanation, and advanced music-theory analysis are future work.
 
@@ -227,4 +232,4 @@ Validation docs:
 
 ## Limitations
 
-MVP 3.12 renders MusicXML only and does not use an LLM. Score linkage is limited to verified written measures; a source ID in the older review identifies backend data, not a clickable note on the score. It still does not support PDF/image/OMR, `.mxl`, audio, MIDI, local modulation, full classical non-chord tone classification, full sustained harmony inference, phrase-level harmony, melody/voice-leading analysis, or jazz/modern harmony. Non-chord tone candidate hints remain conservative. Both human workflows are local, not machine corrections or a marketplace: older machine-review records require the same file bytes **and analysis version**, while independent harmony annotations require the same file bytes and verified written structure but intentionally do **not** bind to analysis version. The comparison view is not a verdict or accuracy metric. OMR remains isolated research.
+MVP 3.13 renders MusicXML only and does not use an LLM. Score linkage is limited to verified written measures; a source ID in the older review identifies backend data, not a clickable note on the score. It still does not support PDF/image/OMR, `.mxl`, audio, MIDI, local modulation, full classical non-chord tone classification, full sustained harmony inference, phrase-level harmony, melody/voice-leading analysis, or jazz/modern harmony. Non-chord tone candidate hints remain conservative. Both human workflows are local, not machine corrections or a marketplace: older machine-review records require the same file bytes **and analysis version**, while independent harmony annotations require the same file bytes and verified written structure but intentionally do **not** bind to analysis version. The comparison view is not a verdict or accuracy metric. OMR remains isolated research.

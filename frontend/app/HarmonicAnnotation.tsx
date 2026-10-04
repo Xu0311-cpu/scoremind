@@ -2,7 +2,13 @@
 
 import { ChangeEvent, FormEvent, useState } from "react";
 import { HARMONY_FUNCTIONS, HARMONY_QUALITIES, type HarmonyEntry, type HarmonyEvent, type HarmonyPackage } from "./harmonicAnnotations";
+import { adjacentAnnotationIndex, filteredAnnotationPositions, summarizeAnnotationProgress, type AnnotationFilter, type AnnotationStatus } from "./annotationProgress";
 import type { VerifiedScoreStructure } from "./scoreStructure";
+
+const STATUS_LABELS: Record<AnnotationStatus, string> = {
+  unannotated: "未标注", unclear: "不明确", partial: "部分位置已录", determined: "已录事件明确",
+};
+const BASIS_LABELS = { score_only_attested: "自述仅看原谱", machine_visible: "已见机器结果" } as const;
 
 const emptyEvent = (): HarmonyEvent => ({ offset_qn: "0", label: "", root: null, quality: null,
   roman_numeral: null, key_context: null, harmonic_function: null, evidence: "" });
@@ -102,9 +108,15 @@ export default function HarmonicAnnotation({ structure, value, selectedIndex, on
   unavailableReason: string | null;
 }) {
   const [reviewer, setReviewer] = useState(value?.reviewer_label ?? "");
+  const [statusFilter, setStatusFilter] = useState<AnnotationFilter>("all");
   const entry = value?.entries.find((item) => item.measure_index === selectedIndex) ?? null;
   const machineVisible = revealed || !blindEligible || entry?.basis === "machine_visible";
   const pitchBasisLocked = value?.entries.some((item) => item.events.length > 0) ?? false;
+  const progress = value && structure && value.measure_count === structure.measure_numbers.length
+    ? summarizeAnnotationProgress(structure.measure_numbers, value) : null;
+  const matching = progress ? filteredAnnotationPositions(progress.positions, statusFilter) : [];
+  const previousMatching = adjacentAnnotationIndex(matching, selectedIndex, -1);
+  const nextMatching = adjacentAnnotationIndex(matching, selectedIndex, 1);
 
   async function importFile(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -117,6 +129,35 @@ export default function HarmonicAnnotation({ structure, value, selectedIndex, on
     <p className="panel-note">只依据原谱记录人工判断，与机器分析及旧校审意见分开保存。不计算准确率；未录事件不代表机器漏报。草稿仅在此浏览器，非云同步。</p>
     {!value || !structure ? <p className="timeline-caution" role="status">{unavailableReason ?? "正在核对原文件 SHA-256 与书面小节结构；此前仍可使用普通 Analyze。"}</p> : <>
       <p className="panel-note">文件 SHA-256：<code className="review-fingerprint">{value.file_sha256}</code> · 书面小节 {value.measure_count} · 人工已录 {value.entries.length}。{machineVisible ? "新建/编辑只能标为 machine_visible。" : "目前仅看原谱；score_only_attested 仍只是自我声明。"}</p>
+      {progress && <div className="annotation-progress" aria-label="独立人工标注状态导航">
+        <h4>人工标注进度</h4>
+        <p className="panel-note">未标注是书面位置数；其他状态和填写基准是人工记录数。两组计数分别统计同一批记录，不能相加为准确率。determined 仅表示已录事件明确，不证明整小节穷尽；盲标注基准只是自我声明。</p>
+        <div className="annotation-progress-counts" aria-live="polite">
+          <span>未标注位置 {progress.unannotatedPositions}</span><span>不明确记录 {progress.unclearRecords}</span>
+          <span>部分记录 {progress.partialRecords}</span><span>已录事件明确记录 {progress.determinedRecords}</span>
+          <span>自述仅看原谱 {progress.scoreOnlyAttestedRecords}</span><span>已见机器结果 {progress.machineVisibleRecords}</span>
+        </div>
+        <div className="annotation-progress-controls">
+          <label>筛选人工记录状态<select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as AnnotationFilter)}>
+            <option value="all">全部书面小节</option><option value="unannotated">未标注</option>
+            <option value="unclear">不明确</option><option value="partial">部分位置已录</option>
+            <option value="determined">已录事件明确</option>
+          </select></label>
+          <label>跳转到书面小节<select value={matching.some((position) => position.measureIndex === selectedIndex) ? selectedIndex! : ""}
+            onChange={(event) => { if (event.target.value) onSelectIndex(Number(event.target.value)); }}>
+            <option value="">选择书面小节</option>
+            {matching.map((position) => <option key={position.measureIndex} value={position.measureIndex}>
+              书面第 {position.measureIndex} 小节 · 原谱标号 {position.displayNumber} · {STATUS_LABELS[position.status]}
+              {position.basis ? ` · ${BASIS_LABELS[position.basis]}` : ""}
+            </option>)}
+          </select></label>
+          <button type="button" className="secondary-button" disabled={previousMatching === null}
+            onClick={() => { if (previousMatching !== null) onSelectIndex(previousMatching); }}>上一处</button>
+          <button type="button" className="secondary-button" disabled={nextMatching === null}
+            onClick={() => { if (nextMatching !== null) onSelectIndex(nextMatching); }}>下一处</button>
+        </div>
+        {matching.length === 0 && <p className="panel-note" role="status">当前筛选没有对应的书面小节。</p>}
+      </div>}
       <div className="review-form harmony-metadata">
         <label>校审者署名或化名<input value={reviewer} maxLength={80} onChange={(e) => setReviewer(e.target.value)} onBlur={() => { if (reviewer !== value.reviewer_label) onMetadata({ reviewer_label: reviewer.trim() }); }} /></label>
         <label>音高基准<select value={value.pitch_basis} disabled={pitchBasisLocked} onChange={(e) => onMetadata({ pitch_basis: e.target.value as HarmonyPackage["pitch_basis"] })}>

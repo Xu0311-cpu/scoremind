@@ -87,6 +87,10 @@ Important areas:
 
 OpenSheetMusicDisplay renders the uploaded MusicXML text in the browser. This preview is for visual verification only. It is not OMR and does not convert images or PDFs.
 
+### MVP 3.13 人工标注状态导航
+
+MVP 3.13 的 `annotationProgress.ts` 是独立人工标注包的只读投影：以 OSMD 已核实的书面小节索引列出未标注/`unclear`/`partial`/`determined`，并单独计数 `score_only_attested` 与 `machine_visible`。`HarmonicAnnotation.tsx` 用状态筛选和前后/直接跳转调用页面原有的书面小节选择函数。显示编号不用于索引，重复编号仍是不同位置。导入、编辑、删除及同文件草稿恢复后，从当前 SHA-256 绑定的包重算，不另存进度；组件只接收与当前指纹匹配的包。它不读取机器分析、旧校审记录或学习报告。`determined` 不表示整小节穷尽，盲标注声明未被验证为金标准；进度不是准确率。发布版 `3.13.0` 保留 `analysis_version=3.11.0` 及独立人工包 v1。
+
 ### MVP 3.12 人工对照视图
 
 `comparisonRules.ts` 是前端只读规则：先验证当前原文件 SHA-256、分析请求指纹、独立标注包、原谱核验结构、机器小节 `measure_index` 与时间轴多乐器书面网格，并以精确分数核对每小节时值及累计起止边界；无法证明同谱同小节时不并列数据。身份成立后，`HarmonicComparison.tsx` 分栏显示人工标注、已有同起点和弦及记谱时间轴来源。单一同起点事件等严格条件只决定“位置可供人工核对”，并不比较字段相等性、自动评分或识别新和弦；`partial/unsupported`、不同音高基准和歧义位置保守回退。页面仅在机器揭示、分析存在且当前 SHA 与分析指纹一致时挂载组件，盲态 DOM 中没有对照机器结论。跳转旧 `ExpertReview` 只同步书面索引和滚动，不保存意见。三套数据的键、格式与生命周期不互相覆盖；学习报告和解释请求不读取此视图。应用发布版 `3.12.0` 不改变确定性 `analysis_version=3.11.0`，旧校审草稿/JSON 仍能按原版本键恢复。
