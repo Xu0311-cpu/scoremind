@@ -738,9 +738,14 @@ export default function Home() {
       ? "machine_visible" as const : entry.basis };
     try {
       let storage: Storage | null = null;
-      try { storage = window.localStorage; } catch { /* Keep a session-only machine-visible entry. */ }
+      try { storage = window.localStorage; } catch { /* The form remains unsaved. */ }
       const result = saveHarmonyEntryWithStorage(harmonyScope, harmonyPackage, safe, storage);
-      keepHarmonyInMemory(result.value, !result.stored);
+      if (!result.stored) {
+        setBlindEligible(false);
+        setHarmonyMessage("本地存储写入失败：本次人工编辑尚未保存；表单和离页提醒保持有效。请恢复存储后重试。导出 JSON 不含未保存编辑。");
+        return false;
+      }
+      keepHarmonyInMemory(result.value, false);
       return true;
     } catch (err) {
       setHarmonyMessage(err instanceof Error ? err.message : "人工标注无效，表单未清空。");
