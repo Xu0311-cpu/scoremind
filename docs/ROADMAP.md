@@ -1,9 +1,10 @@
 # Roadmap
 
-This roadmap describes future work. Items listed here are not current MVP 3.13 capabilities unless explicitly implemented elsewhere.
+This roadmap describes future work. Items listed here are not current MVP 3.14 capabilities unless explicitly implemented elsewhere.
 
 ## Current / Completed
 
+- MVP 3.14: 页面内按书面小节比较未保存人工标注与已存记录；换谱、Reset、导入覆盖先确认，离页仅在脏态启用浏览器原生提醒。未保存字段不进入 v1 JSON 或进度；移动端离页提醒不保证触发。
 - MVP 3.13: 对独立人工和声标注按书面小节索引筛选与前后跳转；未标注位置、`unclear`、`partial`、`determined` 及两种填写基准分别计数。计数只描述人工记录状态，不是准确率、完整覆盖或经验证的专业标准；不改变 v1 JSON 与后端乐理分析。
 - MVP 3.12: 在同一原文件 SHA-256 与书面小节结构核实后、主动揭示机器结果时提供只读人工对照；不自动对齐歧义事件、判对错或计算准确率，旧校审意见仍单独保存。
 - MVP 3.11: 原谱优先的逐书面小节独立和声标注、严格版本化 JSON/原文件 SHA-256 绑定、全页面机器结果揭示闸门和本地草稿；人工判断与旧校审、机器输出及学习报告隔离，不计算准确率。
@@ -51,4 +52,4 @@ This roadmap describes future work. Items listed here are not current MVP 3.13 c
 
 ## Current Boundary
 
-The current score input is MusicXML/XML only. MVP 3.13 adds browser-local human annotation progress navigation, not new score input or analysis. Conservative non-chord tone candidate hints remain learning aids; the runtime app still does not perform OMR, PDF/image upload, MIDI/audio analysis, local modulation, full classical non-chord tone classification, full sustained harmony inference, melody analysis, voice-leading analysis, or jazz/modern harmony analysis. Time-slice pitch observations are not harmony classifications.
+The current score input is MusicXML/XML only. MVP 3.14 adds unsaved human annotation protection, not new score input or analysis. Conservative non-chord tone candidate hints remain learning aids; the runtime app still does not perform OMR, PDF/image upload, MIDI/audio analysis, local modulation, full classical non-chord tone classification, full sustained harmony inference, melody analysis, voice-leading analysis, or jazz/modern harmony analysis. Time-slice pitch observations are not harmony classifications.

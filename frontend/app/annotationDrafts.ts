@@ -1,4 +1,4 @@
-import type { HarmonyEntry, HarmonyEvent } from "./harmonicAnnotations";
+import type { HarmonyEntry, HarmonyEvent, HarmonyPackage } from "./harmonicAnnotations";
 
 export type AnnotationDraft = {
   assessment: HarmonyEntry["assessment"];
@@ -27,4 +27,23 @@ export function clearMeasureDraft(drafts: AnnotationDrafts, measureIndex: number
   const next = { ...drafts };
   delete next[measureIndex];
   return next;
+}
+
+function sameEvent(left: HarmonyEvent, right: HarmonyEvent): boolean {
+  return left.offset_qn === right.offset_qn && left.label === right.label && left.root === right.root
+    && left.quality === right.quality && left.roman_numeral === right.roman_numeral
+    && left.key_context === right.key_context && left.harmonic_function === right.harmonic_function
+    && left.evidence === right.evidence;
+}
+
+export function isUnsavedMeasureDraft(draft: AnnotationDraft, entry: HarmonyEntry | null): boolean {
+  const saved = draftForMeasure({}, entry?.measure_index ?? 0, entry);
+  return draft.assessment !== saved.assessment || draft.unclearReason !== saved.unclearReason
+    || draft.rationale !== saved.rationale || draft.events.length !== saved.events.length
+    || draft.events.some((event, index) => !sameEvent(event, saved.events[index]));
+}
+
+export function unsavedMeasureIndices(drafts: AnnotationDrafts, savedPackage: HarmonyPackage | null): number[] {
+  return Object.keys(drafts).map(Number).filter((index) =>
+    isUnsavedMeasureDraft(drafts[index], savedPackage?.entries.find((entry) => entry.measure_index === index) ?? null));
 }

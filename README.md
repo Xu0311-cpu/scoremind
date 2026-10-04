@@ -1,12 +1,16 @@
-# ScoreMind — AI Music Score Understanding (MVP 3.13)
+# ScoreMind — AI Music Score Understanding (MVP 3.14)
 
 ScoreMind is a deterministic MusicXML score understanding tool for music students. It parses symbolic score data, analyzes basic harmony and note-level chord membership, renders a score preview, and turns the result into student-friendly learning views.
 
-Current release: MVP 3.13. Current score uploads remain limited to `.musicxml` and `.xml`.
+Current release: MVP 3.14. Current score uploads remain limited to `.musicxml` and `.xml`.
+
+MVP 3.14 protects **unsaved independent harmony edits** in the current page. It compares each written measure's form with its saved human record: blank or unchanged forms do not trigger a warning. Switching score files (including unsupported files), Reset, and confirmed JSON replacement ask before discarding unsaved edits; cancellation keeps the current score and form. Browser-native leave/reload warnings are enabled only while unsaved edits exist. Browser prompts cannot use custom wording and may not fire reliably on mobile. Unsaved fields remain session-only and are **not** included in the v1 annotation JSON, progress counts, machine analysis, or Learning Report.
+
+The app and template explanation release is `3.14.0`; unchanged deterministic `analysis_version=3.11.0` preserves older ExpertReview drafts and imports. The independent annotation format remains v1. No new harmony capability was added.
 
 MVP 3.13 adds a **human annotation progress navigator** beside the independent harmony form. It lists unannotated written positions and separate counts of `unclear`, `partial`, and `determined` human records; it also distinguishes `score_only_attested` from `machine_visible`. Filtering and Previous/Next use written measure indices, not printed numbers. These are record states, not harmonic accuracy or evidence that a `determined` measure was exhaustively annotated. An attested blind entry remains a reviewer self-declaration, not a verified professional gold standard. Imported and restored drafts recalculate the view for the same original-file SHA-256. No backend theory rules or annotation JSON fields change.
 
-The app and template explanation release is `3.13.0`; the unchanged deterministic `analysis_version` remains `3.11.0` to preserve older ExpertReview drafts and imports. The independent annotation format remains v1.
+In MVP 3.13, the app and template explanation release was `3.13.0`; the deterministic `analysis_version` remained `3.11.0`.
 
 MVP 3.12 adds a **read-only human comparison view** after the reviewer reveals machine results. It places the independent harmony annotation, same-written-measure machine chord output, and notated timeline evidence alongside one another only when the original-file SHA-256 and written-measure identity can be verified. Ambiguous or unsupported cases say they cannot be directly compared. A shortcut opens the existing ExpertReview form at that written measure; it never saves an opinion automatically. No verdict, accuracy metric, new harmony inference, or change to the independent annotation JSON is introduced. See [comparison rules and acceptance cases](docs/HARMONIC_COMPARISON.md).
 

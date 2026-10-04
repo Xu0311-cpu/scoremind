@@ -10,6 +10,11 @@ const mod = { exports: {} };
 new Function("module", "exports", compiled)(mod, mod.exports);
 const { MAX_HARMONY_BYTES, createHarmonyPackage, harmonyStorageKey, parseHarmonyPackage, readHarmonyDraft,
   replaceHarmonyDraft, revealStorageKey, saveHarmonyEntry, saveHarmonyEntryWithStorage, updateHarmonyPackage, validateHarmonyPackage, writeHarmonyDraft } = mod.exports;
+const draftSource = fs.readFileSync(path.join(__dirname, "../app/annotationDrafts.ts"), "utf8");
+const draftCompiled = ts.transpileModule(draftSource, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
+const draftMod = { exports: {} };
+new Function("module", "exports", draftCompiled)(draftMod, draftMod.exports);
+const { draftForMeasure, unsavedMeasureIndices } = draftMod.exports;
 
 const sha = "d954c063542c39b11ac271495c33d5a65ffd5b1c835b6cae81f0d1a0094531c5";
 const scope = { file_sha256: sha, measure_durations_qn: ["4", "4", "4", "4"] };
@@ -115,6 +120,30 @@ test("storage failure does not turn package into a blind claim", () => {
   const persisted = saveHarmonyEntryWithStorage(scope, blank, entry, local);
   assert.equal(persisted.stored, true);
   assert.equal(readHarmonyDraft(local, scope).entries[0].basis, "score_only_attested");
+});
+
+test("failed storage save leaves the persisted baseline and edited measure unchanged", () => {
+  const blocked = { setItem() { throw Error("QuotaExceededError"); } };
+  const failed = saveHarmonyEntryWithStorage(scope, blank, entry, blocked);
+  assert.equal(failed.stored, false);
+  const draft = draftForMeasure({}, 1, failed.value.entries[0]);
+  assert.equal(blank.entries.length, 0);
+  assert.deepEqual(unsavedMeasureIndices({ 1: draft }, blank), [1]);
+
+  const local = storage();
+  const retried = saveHarmonyEntryWithStorage(scope, blank, failed.value.entries[0], local);
+  assert.equal(retried.stored, true);
+  assert.deepEqual(readHarmonyDraft(local, scope), retried.value);
+  assert.deepEqual(unsavedMeasureIndices({}, retried.value), []);
+
+  const prior = saveHarmonyEntry(scope, blank, entry);
+  writeHarmonyDraft(local, scope, prior);
+  const edited = { ...entry, rationale: "修改后的原谱依据" };
+  const rejectedEdit = saveHarmonyEntryWithStorage(scope, prior, edited, blocked);
+  assert.equal(rejectedEdit.stored, false);
+  assert.equal(prior.entries[0].rationale, entry.rationale);
+  assert.deepEqual(readHarmonyDraft(local, scope), prior);
+  assert.deepEqual(unsavedMeasureIndices({ 1: draftForMeasure({}, 1, edited) }, prior), [1]);
 });
 
 test("failed import replacement preserves the saved draft and current package", () => {
