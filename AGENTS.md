@@ -2,7 +2,7 @@
 
 ## 项目现状
 
-ScoreMind 是面向音乐学习者的确定性 MusicXML 乐谱分析系统。当前版本为 MVP 3.12，运行时乐谱输入仅接受 `.musicxml` 和 `.xml` 文件。
+ScoreMind 是面向音乐学习者的确定性 MusicXML 乐谱分析系统。当前版本为 MVP 3.13，运行时乐谱输入仅接受 `.musicxml` 和 `.xml` 文件。
 
 后端负责解析符号化乐谱并生成可审计的结构化分析；前端负责乐谱预览、学习视图、技术证据和 Markdown 学习报告。确定性后端输出是产品的事实来源，解释层和前端不得自行推断新的乐理结论。
 
@@ -28,6 +28,7 @@ ScoreMind 是面向音乐学习者的确定性 MusicXML 乐谱分析系统。当
 - MVP 3.10 增加可再分发 CC0 真实短谱例的结构性验证，以及只依据人工校审记录的书面小节计数/待审跳转。预期先于程序输出记录；复杂和声标为不明确，不能反填程序输出或宣称总体准确率。
 - MVP 3.11 增加与机器分析和旧校审分离的浏览器独立和声标注。v1 JSON 按原文件 SHA-256 与核实的书面小节结构绑定，不绑定分析版本；`determined` 不保证整小节覆盖，不计算准确率。全页面盲态在机器揭示前隐藏既有分析视图；存储或指纹失败时经明确确认仍可普通 Analyze，但本次新建/编辑不能声明 `score_only_attested`。
 - MVP 3.12 增加揭示后的只读人工对照视图。`comparisonRules.ts` 核对原文件 SHA、书面小节索引、原谱时值与时间轴累计网格；歧义时显示不可直接比较，不自动判对错。`HarmonicComparison.tsx` 仅分栏展示既有数据，并可跳入原有 ExpertReview；不改变三份数据的存储契约。应用版为 3.12.0，未变化的 `analysis_version` 保持 3.11.0，以保留旧校审草稿/导入兼容。
+- MVP 3.13 在独立人工标注表单中按书面索引显示/导航人工记录状态；未标注位置数与 `unclear/partial/determined` 记录数、两种填写基准分别计算。不将 `determined` 误称整小节穷尽，也不把自述盲标注当金标准或计算准确率。应用版 3.13.0，`analysis_version` 仍为 3.11.0，人工包格式仍为 v1。
 - 新时间轴来源以 XML part/staff/voice/instrument 标签为准，不用 music21 随机 ID 或跨小节上下文猜身份。书面小节顺序与显示编号独立，缺失身份或歧义 tie 必须诊断。
 - MVP 3.5 提供经过音/辅助音候选提示；它们只是保守学习提示，置信度固定为 `low`，不能表述为最终乐理结论。MVP 3.6 的持续音时间轴不改变这条边界。
 - 当前没有真实 LLM/OpenAI 调用、数据库、认证、用户系统或持久化任务队列。
@@ -63,6 +64,8 @@ ScoreMind 是面向音乐学习者的确定性 MusicXML 乐谱分析系统。当
 - `frontend/app/ScorePreview.tsx`、`frontend/app/scoreMeasureNavigation.ts`：客户端 OSMD 渲染、书面小节映射验证、标框与滚动；`WrittenMeasureNavigator.tsx` 提供共享导航。
 - `frontend/app/ExpertReview.tsx`、`frontend/app/reviewRecords.ts`：人工校审界面、独立 JSON 契约及严格导入校验；与分析 API 分开。
 - `frontend/app/HarmonicAnnotation.tsx`、`frontend/app/harmonicAnnotations.ts`、`frontend/app/harmonicReveal.ts`：独立人工和声记录、v1 JSON 契约与机器结果揭示闸门；`scoreStructure.ts` 从原谱/OSMD 核对书面小节结构。
+- `frontend/app/annotationProgress.ts`：只读人工标注状态统计与书面索引跳转；不读取机器结果或旧校审意见。
+- `frontend/app/annotationDrafts.ts`：仅当前页面内按书面索引保存未提交表单字段，防止小节导航丢稿；不是独立 JSON 包或浏览器持久草稿。
 - `frontend/app/HarmonicComparison.tsx`、`frontend/app/comparisonRules.ts`：3.12 揭示后的只读人工对照与保守身份/位置门槛；不输出新和声结论。
 - `backend/tests/fixtures/professional/`、`backend/tests/test_professional_validation.py`、`docs/PROFESSIONAL_VALIDATION.md`：带 CC0 来源的真实短节选、固定结构预期及 API 回归。
 - `frontend/public/samples/`：可下载演示样例，不代表转换能力。

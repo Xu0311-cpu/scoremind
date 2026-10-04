@@ -818,7 +818,7 @@ export default function Home() {
       <section className="workspace">
         <header className="page-header">
           <div>
-            <p className="eyebrow">MVP 3.12</p>
+            <p className="eyebrow">MVP 3.13</p>
             <h1>ScoreMind</h1>
             <p className="product-subtitle">AI Music Score Understanding</p>
           </div>
@@ -898,7 +898,7 @@ export default function Home() {
               ) : (
                 <div className="unsupported-source-note">
                   <p>
-                    This source is guidance-only in MVP 3.12. The runtime upload control still accepts only
+                    This source is guidance-only in MVP 3.13. The runtime upload control still accepts only
                     {" "}.musicxml and .xml files after you export or convert externally.
                   </p>
                 </div>
@@ -913,7 +913,8 @@ export default function Home() {
                 selectedMeasureIndex={selectedMeasureIndex} navigationToken={navigationToken}
                 onStructureChange={(structure, reason) => { setScoreStructure(structure); setStructureReason(reason); if (structure) setSelectedMeasureIndex((current) => current ?? 1); }} />
               <HarmonicAnnotation key={`${fileRevision}:${harmonyPackage?.annotation_set_id ?? "loading"}:${harmonyImportRevision}`} structure={scoreStructure}
-                value={harmonyPackage} selectedIndex={selectedMeasureIndex} onSelectIndex={selectWrittenMeasure}
+                value={harmonyPackage?.file_sha256 === fileFingerprint ? harmonyPackage : null}
+                selectedIndex={selectedMeasureIndex} onSelectIndex={selectWrittenMeasure}
                 blindEligible={blindEligible} revealed={machineRevealed}
                 onSaveEntry={saveHarmony} onDeleteEntry={removeHarmonyEntry} onMetadata={updateHarmonyMetadata}
                 onImport={importHarmony} onExport={exportHarmony} pendingCount={pendingHarmonyImport?.entries.length ?? null}
