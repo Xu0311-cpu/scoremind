@@ -1,12 +1,14 @@
-# ScoreMind — AI Music Score Understanding (MVP 3.14)
+# ScoreMind — AI Music Score Understanding (MVP 3.15)
 
 ScoreMind is a deterministic MusicXML score understanding tool for music students. It parses symbolic score data, analyzes basic harmony and note-level chord membership, renders a score preview, and turns the result into student-friendly learning views.
 
-Current release: MVP 3.14. Current score uploads remain limited to `.musicxml` and `.xml`.
+Candidate release: MVP 3.15.0; physical-phone touch acceptance is still pending. Current score uploads remain limited to `.musicxml` and `.xml`.
+
+MVP 3.15 records a 390px browser validation pass for score navigation, human annotation and JSON round-trip. **Physical iPhone Safari and Android Chrome touch testing remains unverified**; pointer simulation is not a substitute. No new analysis or input capability was added. See the [3.15 mobile validation record](docs/MOBILE_VALIDATION_3_15.md) for the device matrix, screenshots and remaining risks.
 
 MVP 3.14 protects **unsaved independent harmony edits** in the current page. It compares each written measure's form with its saved human record: blank or unchanged forms do not trigger a warning. Switching score files (including unsupported files), Reset, and confirmed JSON replacement ask before discarding unsaved edits; cancellation keeps the current score and form. Browser-native leave/reload warnings are enabled only while unsaved edits exist. Browser prompts cannot use custom wording and may not fire reliably on mobile. Unsaved fields remain session-only and are **not** included in the v1 annotation JSON, progress counts, machine analysis, or Learning Report.
 
-The app and template explanation release is `3.14.0`; unchanged deterministic `analysis_version=3.11.0` preserves older ExpertReview drafts and imports. The independent annotation format remains v1. No new harmony capability was added.
+The app and template explanation release is `3.15.0`; unchanged deterministic `analysis_version=3.11.0` preserves older ExpertReview drafts and imports. The independent annotation format remains v1. No new harmony capability was added.
 
 MVP 3.13 adds a **human annotation progress navigator** beside the independent harmony form. It lists unannotated written positions and separate counts of `unclear`, `partial`, and `determined` human records; it also distinguishes `score_only_attested` from `machine_visible`. Filtering and Previous/Next use written measure indices, not printed numbers. These are record states, not harmonic accuracy or evidence that a `determined` measure was exhaustively annotated. An attested blind entry remains a reviewer self-declaration, not a verified professional gold standard. Imported and restored drafts recalculate the view for the same original-file SHA-256. No backend theory rules or annotation JSON fields change.
 
@@ -145,11 +147,11 @@ ScoreMind demonstrates an AI product architecture where domain reasoning is dete
 - If you use MuseScore or notation software, export MusicXML/XML first, then upload.
 - If you only have PDF, image, screenshot, or scanned paper, convert externally to MusicXML before using this MVP.
 - The Score Input Workspace explains these paths in the frontend, but it does not add PDF/image/MIDI/audio upload.
-- Input conversion is future work. MVP 3.13 keeps the runtime score upload path limited to MusicXML/XML.
+- Input conversion is future work. MVP 3.15 keeps the runtime score upload path limited to MusicXML/XML.
 
 ## Sample Files
 
-MVP 3.13 includes downloadable demo MusicXML files in `frontend/public/samples`:
+MVP 3.15 includes downloadable demo MusicXML files in `frontend/public/samples`:
 
 - `frontend/public/samples/c_major_progression.musicxml`: demonstrates global key, Roman numerals, harmonic functions, and Measure Walkthrough.
 - `frontend/public/samples/carried_context_notes.musicxml`: demonstrates note-level chord-tone labels and carried previous chord context.
@@ -160,7 +162,7 @@ In the frontend, use the `Try sample files` panel to download a sample, then upl
 
 - Backend deterministic analysis remains the source of truth.
 - Student Analysis is computed only from existing backend analysis JSON and does not infer new conclusions.
-- MusicXML/XML remains the only runtime score input path in MVP 3.13; review JSON import is a separate human annotation workflow.
+- MusicXML/XML remains the only runtime score input path in MVP 3.15; review JSON import is a separate human annotation workflow.
 - OMR feasibility work lives only in `docs/OMR_EXPERIMENT.md` and `experiments/omr`.
 - Input conversion, real LLM explanation, and advanced music-theory analysis are future work.
 
@@ -236,4 +238,4 @@ Validation docs:
 
 ## Limitations
 
-MVP 3.13 renders MusicXML only and does not use an LLM. Score linkage is limited to verified written measures; a source ID in the older review identifies backend data, not a clickable note on the score. It still does not support PDF/image/OMR, `.mxl`, audio, MIDI, local modulation, full classical non-chord tone classification, full sustained harmony inference, phrase-level harmony, melody/voice-leading analysis, or jazz/modern harmony. Non-chord tone candidate hints remain conservative. Both human workflows are local, not machine corrections or a marketplace: older machine-review records require the same file bytes **and analysis version**, while independent harmony annotations require the same file bytes and verified written structure but intentionally do **not** bind to analysis version. The comparison view is not a verdict or accuracy metric. OMR remains isolated research.
+MVP 3.15 renders MusicXML only and does not use an LLM. Score linkage is limited to verified written measures; a source ID in the older review identifies backend data, not a clickable note on the score. It still does not support PDF/image/OMR, `.mxl`, audio, MIDI, local modulation, full classical non-chord tone classification, full sustained harmony inference, phrase-level harmony, melody/voice-leading analysis, or jazz/modern harmony. Non-chord tone candidate hints remain conservative. Both human workflows are local, not machine corrections or a marketplace: older machine-review records require the same file bytes **and analysis version**, while independent harmony annotations require the same file bytes and verified written structure but intentionally do **not** bind to analysis version. The comparison view is not a verdict or accuracy metric. OMR remains isolated research.

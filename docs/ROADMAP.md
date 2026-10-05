@@ -1,6 +1,10 @@
 # Roadmap
 
-This roadmap describes future work. Items listed here are not current MVP 3.14 capabilities unless explicitly implemented elsewhere.
+This roadmap describes future work. Items listed here are not current MVP 3.15 capabilities unless explicitly implemented elsewhere.
+
+## Validation In Progress
+
+- MVP 3.15 候选：390px Edge 响应式指针环境完成部分移动可用性矩阵与实际 JSON 落盘回导；实体 iPhone Safari/Android Chrome 均未验证，浏览器取消换谱也未可靠复现。**真实手机触控验收尚未通过，不计入已完成里程碑。** 无新乐理、输入或标注契约能力；详见 [`MOBILE_VALIDATION_3_15.md`](MOBILE_VALIDATION_3_15.md)。
 
 ## Current / Completed
 
@@ -52,4 +56,4 @@ This roadmap describes future work. Items listed here are not current MVP 3.14 c
 
 ## Current Boundary
 
-The current score input is MusicXML/XML only. MVP 3.14 adds unsaved human annotation protection, not new score input or analysis. Conservative non-chord tone candidate hints remain learning aids; the runtime app still does not perform OMR, PDF/image upload, MIDI/audio analysis, local modulation, full classical non-chord tone classification, full sustained harmony inference, melody analysis, voice-leading analysis, or jazz/modern harmony analysis. Time-slice pitch observations are not harmony classifications.
+The current score input is MusicXML/XML only. MVP 3.15 documents narrow-screen validation, not new score input or analysis. Conservative non-chord tone candidate hints remain learning aids; the runtime app still does not perform OMR, PDF/image upload, MIDI/audio analysis, local modulation, full classical non-chord tone classification, full sustained harmony inference, melody analysis, voice-leading analysis, or jazz/modern harmony analysis. Time-slice pitch observations are not harmony classifications.
