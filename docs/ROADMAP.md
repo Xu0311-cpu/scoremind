@@ -2,9 +2,12 @@
 
 This roadmap describes future work. Items listed here are not current MVP 3.15 capabilities unless explicitly implemented elsewhere.
 
+## Validation In Progress
+
+- MVP 3.15 候选：390px Edge 响应式指针环境完成部分移动可用性矩阵与实际 JSON 落盘回导；实体 iPhone Safari/Android Chrome 均未验证，浏览器取消换谱也未可靠复现。**真实手机触控验收尚未通过，不计入已完成里程碑。** 无新乐理、输入或标注契约能力；详见 [`MOBILE_VALIDATION_3_15.md`](MOBILE_VALIDATION_3_15.md)。
+
 ## Current / Completed
 
-- MVP 3.15: 390px Edge 响应式指针环境完成部分移动可用性矩阵与实际 JSON 落盘回导；实体 iPhone Safari/Android Chrome 均未验证，因此真实触控验收尚未完成。无新乐理、输入或标注契约能力；详见 [`MOBILE_VALIDATION_3_15.md`](MOBILE_VALIDATION_3_15.md)。
 - MVP 3.14: 页面内按书面小节比较未保存人工标注与已存记录；换谱、Reset、导入覆盖先确认，离页仅在脏态启用浏览器原生提醒。未保存字段不进入 v1 JSON 或进度；移动端离页提醒不保证触发。
 - MVP 3.13: 对独立人工和声标注按书面小节索引筛选与前后跳转；未标注位置、`unclear`、`partial`、`determined` 及两种填写基准分别计数。计数只描述人工记录状态，不是准确率、完整覆盖或经验证的专业标准；不改变 v1 JSON 与后端乐理分析。
 - MVP 3.12: 在同一原文件 SHA-256 与书面小节结构核实后、主动揭示机器结果时提供只读人工对照；不自动对齐歧义事件、判对错或计算准确率，旧校审意见仍单独保存。

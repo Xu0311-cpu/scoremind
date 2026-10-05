@@ -1,6 +1,6 @@
 # MVP 3.15 Release Notes
 
-## 当前发布：3.15.0
+## 本地候选版：3.15.0（实体验收待完成）
 
 - 对获许可的 K.157、K.80 及重复显示小节号 fixture 记录 390px 浏览器谱面/导航/人工标注与 JSON 往返检查；截图、设备清单和未完成项目见 [`MOBILE_VALIDATION_3_15.md`](MOBILE_VALIDATION_3_15.md)。
 - 实体 iPhone Safari 与 Android Chrome 本轮均无可用设备，**真实触控验收未完成**。OSMD 在响应式宽度暂为 1 时出现警告；恢复 390 后谱面可见，实体旋转/缩放恢复仍待测。
