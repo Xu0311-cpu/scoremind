@@ -1,4 +1,8 @@
-# Validation Guide for MVP 3.14
+# Validation Guide for MVP 3.15
+
+## MVP 3.15 窄屏与实体触控验收
+
+设备、逐场景结果、页面截图与未完成项见 [`MOBILE_VALIDATION_3_15.md`](MOBILE_VALIDATION_3_15.md)。本轮完成的是 macOS Edge 390px 指针/响应式检查，不是实体 iPhone Safari 或 Android Chrome 验收；两类设备均标为**未验证**。真实 JSON 下载落盘并回导在重复编号结构 fixture 上完成，临时人工条目最后删除。K.157/K.80 均为许可可追溯谱例；没有专业人士独立判断，不计算准确率。
 
 ## MVP 3.14 未保存人工标注防丢稿验证
 
