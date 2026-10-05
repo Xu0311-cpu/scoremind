@@ -2,7 +2,7 @@
 
 ScoreMind is a deterministic MusicXML score understanding tool for music students. It parses symbolic score data, analyzes basic harmony and note-level chord membership, renders a score preview, and turns the result into student-friendly learning views.
 
-Current local candidate: MVP 3.15.0; physical-phone touch acceptance is still pending. Current score uploads remain limited to `.musicxml` and `.xml`.
+Candidate release: MVP 3.15.0; physical-phone touch acceptance is still pending. Current score uploads remain limited to `.musicxml` and `.xml`.
 
 MVP 3.15 records a 390px browser validation pass for score navigation, human annotation and JSON round-trip. **Physical iPhone Safari and Android Chrome touch testing remains unverified**; pointer simulation is not a substitute. No new analysis or input capability was added. See the [3.15 mobile validation record](docs/MOBILE_VALIDATION_3_15.md) for the device matrix, screenshots and remaining risks.
 
