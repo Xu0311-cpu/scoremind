@@ -1,6 +1,8 @@
 # ScoreMind — AI Music Score Understanding (MVP 3.15)
 
-ScoreMind is a deterministic MusicXML score understanding tool for music students. It parses symbolic score data, analyzes basic harmony and note-level chord membership, renders a score preview, and turns the result into student-friendly learning views.
+ScoreMind 面向练琴或学习乐理时遇到读谱困难的人：想知道“这是什么和弦、为什么这样判断、这里该怎样理解”，可以选择 MusicXML 乐谱、运行确定性分析、按书面小节查看谱面与简短解释，再按需展开证据。机器结果是依据，不能替代完整的专业乐理判断。
+
+默认页面现在是**读谱**；独立和声标注、人工对照和校审记录集中在显式的“专家校审”入口，普通使用不需要填写人工记录。作品标题从原文件元数据单独排版，避免窄屏下被谱面画布裁切。文件选择器显示所有文件以避开 iPhone 对 `.musicxml` 的过滤问题，但应用与后端仍只接受 `.musicxml`、`.xml`。这些改动只涉及呈现与选择体验，`analysis_version=3.11.0`、标注 JSON v1 和乐理算法不变；原始扩展名仍待实体 iPhone 最终复测。
 
 Candidate release: MVP 3.15.0; physical-phone touch acceptance is still pending. Current score uploads remain limited to `.musicxml` and `.xml`.
 
@@ -55,8 +57,10 @@ ScoreMind is not a chatbot. It is a structured score-understanding prototype bui
 ## Current MVP Capabilities
 
 - Upload `.musicxml` or `.xml` files.
-- Use the Score Input Workspace to understand supported and unsupported score sources.
 - Render a MusicXML score preview.
+- 默认按书面小节查看各起音位置的机器分析；无法可靠映射或没有结论时说明原因，多个事件不合并成整小节唯一和声。
+- 按需打开全曲学习路径、技术证据与模板解释；专家校审是独立入口，不进入普通读谱流程。
+- 其他乐谱来源的导入说明与示例下载仍可展开查看，不构成 PDF/图片上传能力。
 - Navigate from Technical Evidence to the matching written score measure, with a visible staff-level outline when mapping is verified.
 - Record separate, file-bound human review notes by written measure and optional source note ID; export/import them as JSON.
 - Record independent human harmony judgments or uncertainty by verified written measure, separate from machine results and older machine-review notes.

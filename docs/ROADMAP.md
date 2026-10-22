@@ -4,7 +4,7 @@ This roadmap describes future work. Items listed here are not current MVP 3.15 c
 
 ## Validation In Progress
 
-- MVP 3.15 候选：390px Edge 响应式指针环境完成部分移动可用性矩阵与实际 JSON 落盘回导；实体 iPhone Safari/Android Chrome 均未验证，浏览器取消换谱也未可靠复现。**真实手机触控验收尚未通过，不计入已完成里程碑。** 无新乐理、输入或标注契约能力；详见 [`MOBILE_VALIDATION_3_15.md`](MOBILE_VALIDATION_3_15.md)。
+- MVP 3.15 候选：390px Edge 指针环境完成部分移动可用性矩阵与 JSON 回导；用户后来在实体 iPhone 发现 `.musicxml` 文件置灰和标题裁切，本地已修复候选但原机复测未完成。小米 Chrome、浏览器取消换谱也仍待验。**真实手机触控验收尚未通过，不计入已完成里程碑。** 无新乐理或上传格式能力；详见 [`MOBILE_VALIDATION_3_15.md`](MOBILE_VALIDATION_3_15.md)。
 
 ## Current / Completed
 
@@ -28,9 +28,9 @@ This roadmap describes future work. Items listed here are not current MVP 3.15 c
 
 ## Near Term
 
-- Improve visual polish and responsive layout.
-- Improve Measure Walkthrough readability.
-- Add clearer empty states and demo hints.
+- 优先完成学生默认读谱流程：选谱、分析、查看当前书面小节的可读结论，再按需查看证据；专家校审保持独立，不再扩大为默认操作路径。
+- 用原始 `.musicxml` 在实体 iPhone Safari 复测文件选择、标题/谱面布局、书面小节定位；小米 Chrome 复测窄屏触控、草稿保护与 JSON 往返。设备信息和结果未记录前不宣称通过。
+- 改善当前小节多事件的阅读清晰度与无可靠结论时的原因提示，不增加乐理推断。
 - Extend the licensed repertoire validation set only after provenance and independent expectations are recorded.
 - Have a qualified music reviewer annotate ambiguous harmony in the current short excerpts; any future accuracy calculation requires a separately reviewed comparison design and independently verified coverage.
 - Add screenshot-based demo documentation.
