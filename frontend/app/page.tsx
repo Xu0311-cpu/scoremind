@@ -17,6 +17,7 @@ import { MAX_REVIEW_BYTES, deleteReviewRecord, parseReviewPackage, readReviewDra
 import { initialMeasureIndex, writtenMeasureOptions } from "./scoreMeasureNavigation";
 import { chordEventLabel, currentMeasureReading } from "./currentMeasureReading";
 import { isSupportedScoreFile } from "./scoreFileSelection";
+import ExplanationResult from "./ExplanationResult";
 
 type KeyAnalysis = {
   tonic: string | null;
@@ -905,7 +906,8 @@ export default function Home() {
                   </ol> : <p className="timeline-caution">本小节没有可展示的同起点和弦结论；不能据此推断整小节没有和声。</p>}
                 </>}
                 <button type="button" onClick={handleGenerateExplanation} disabled={loadingExplanation}>{loadingExplanation ? "生成中..." : "生成全曲模板解释"}</button>
-                {explanation && <p className="reading-explanation">{explanation.summary}</p>}
+                {explanation && studentSummary && <ExplanationResult result={explanation} keyText={studentSummary.keySummary}
+                  noteText={`音符归属分析中，${noteRoleCounts.chordTone} 个音属于所选和声，${noteRoleCounts.nonChordTone} 个是非和弦音候选，${noteRoleCounts.unknown} 个暂不判断。候选提示需要结合谱面核对。`} />}
                 <p className="reading-limitation">结果由确定性后端给出；持续音集合只是记谱观察，不等于新和弦结论。</p>
               </section>}
               <ScorePreview key={fileRevision} xml={musicXmlText} timeline={machineRevealed ? analysis?.notated_timeline : null}
@@ -1361,37 +1363,6 @@ export default function Home() {
               </>
             )}
           </section>
-        )}
-
-        {machineRevealed && analysis && (
-          <>
-            {explanation && (
-              <section className="panel">
-                <h2>Template Explanation</h2>
-                <dl className="summary-grid compact-grid">
-                  <div>
-                    <dt>Explanation Version</dt>
-                    <dd>{explanation.explanation_version}</dd>
-                  </div>
-                </dl>
-                <p className="summary-text">{explanation.summary}</p>
-                <div className="section-list">
-                  {explanation.sections.map((section) => (
-                    <section key={section.title} className="explanation-section">
-                      <h3>{section.title}</h3>
-                      <p>{section.text}</p>
-                    </section>
-                  ))}
-                </div>
-                <h3>Explanation Warnings</h3>
-                <ul className="warning-list">
-                  {explanation.warnings.map((warning) => (
-                    <li key={warning}>{warning}</li>
-                  ))}
-                </ul>
-              </section>
-            )}
-          </>
         )}
 
         {machineRevealed && analysis && (

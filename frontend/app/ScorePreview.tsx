@@ -5,6 +5,7 @@ import type { OpenSheetMusicDisplay } from "opensheetmusicdisplay";
 import type { NotatedTimelineData } from "./NotatedTimeline";
 import { locateWrittenMeasure } from "./scoreMeasureNavigation";
 import { verifiedScoreStructure, type VerifiedScoreStructure } from "./scoreStructure";
+import { readScoreCredits, type ScoreCredits } from "./scoreCredits";
 
 export default function ScorePreview({ xml, timeline, selectedMeasureIndex, navigationToken, onStructureChange, onLocationChange }: {
   xml: string | null;
@@ -22,7 +23,7 @@ export default function ScorePreview({ xml, timeline, selectedMeasureIndex, navi
   const [renderRevision, setRenderRevision] = useState(0);
   const [renderError, setRenderError] = useState(false);
   const [locationMessage, setLocationMessage] = useState("乐谱尚未渲染，暂不可定位。");
-  const [scoreCredits, setScoreCredits] = useState<{ title: string; composer: string; arranger: string; rights: string } | null>(null);
+  const [scoreCredits, setScoreCredits] = useState<ScoreCredits | null>(null);
   const structureCallbackRef = useRef(onStructureChange);
   structureCallbackRef.current = onStructureChange;
   const locationCallbackRef = useRef(onLocationChange);
@@ -45,13 +46,7 @@ export default function ScorePreview({ xml, timeline, selectedMeasureIndex, navi
     locationCallbackRef.current?.(false, "乐谱正在渲染，暂不可定位。");
     try {
       const document = new DOMParser().parseFromString(xmlToRender, "application/xml");
-      const value = (parent: ParentNode, selector: string) => parent.querySelector(selector)?.textContent?.trim() ?? "";
-      setScoreCredits({
-        title: value(document, "work > work-title") || value(document, "movement-title") || "未提供作品标题",
-        composer: value(document, 'identification > creator[type="composer"]'),
-        arranger: value(document, 'identification > creator[type="arranger"]'),
-        rights: value(document, "identification > rights"),
-      });
+      setScoreCredits(readScoreCredits(document));
     } catch {
       setScoreCredits(null);
     }
@@ -165,12 +160,13 @@ export default function ScorePreview({ xml, timeline, selectedMeasureIndex, navi
   return (
     <div className="score-preview-wrap">
       {scoreCredits && <div className="score-credits">
-        <strong className="score-title">{scoreCredits.title}</strong>
+        <strong className="score-title">{scoreCredits.title || "未提供作品标题"}</strong>
+        {scoreCredits.subtitle && <span className="score-subtitle">{scoreCredits.subtitle}</span>}
         {scoreCredits.composer && <span>{scoreCredits.composer}</span>}
-        {(scoreCredits.arranger || scoreCredits.rights) && <details>
-          <summary>作品来源</summary>
-          {scoreCredits.arranger && <p>{scoreCredits.arranger}</p>}
-          {scoreCredits.rights && <p>{scoreCredits.rights}</p>}
+        {scoreCredits.lyricist && <span>词：{scoreCredits.lyricist}</span>}
+        {scoreCredits.details.length > 0 && <details>
+          <summary>作品来源与其他题注</summary>
+          {scoreCredits.details.map((text) => <p key={text}>{text}</p>)}
         </details>}
       </div>}
       {!xml && <p className="empty-state">正在读取 MusicXML 乐谱预览...</p>}

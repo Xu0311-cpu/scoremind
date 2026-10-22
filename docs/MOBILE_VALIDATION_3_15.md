@@ -51,6 +51,30 @@
 
 ## 本地自动验证
 
+### 读谱界面三项复审修复
+
+`bbd3892` 的独立复审发现：生成解释后自动出现完整长文及重复警告，390px 页面增宽至 398px；credit-only MusicXML 的标题/作者丢失；窄屏上传控件被 `flex-basis: 320px` 撑高。当前补丁分别修复如下：
+
+- 简短解释只复述现有全局调性与音符角色数量；完整 API 摘要、各解释段落、版本和全部警告保留在默认收起的“完整模板解释、限制与诊断”中。长单词和原因代码允许换行；全文不会再自动出现于页面下方。
+- `scoreCredits.ts` 读取结构化作品元数据，并从带 `credit-type` 的题注回退标题、作曲者和词作者；保留副标题/乐章名。其他题注、替代拼写、来源和版权在“作品来源与其他题注”中可查，重复页面题注去重；不根据位置猜测无类型题注的含义。
+- 窄屏纵向布局中，文件标签恢复内容自适应的 flex 高度；选择器仍不设 `accept`，应用与后端的 `.musicxml/.xml` 校验保持。
+
+本次生产构建在 Codex 内置浏览器检查（指针操作，**不是实体触控**）：
+
+| 复现 | 实测结果 |
+| --- | --- |
+| 原始 K.157 上传、Analyze、生成解释，390×844 | 文件标签高 **94.5px**、整个上传表单高 **198.5px**；短解释可见，全文默认收起；页面 `scrollWidth=390` |
+| 上述解释主动展开，包括所有英文警告和长原因码 | `scrollWidth=390`；完整警告仍可查，旧的独立 `Template Explanation` 长页面已移除 |
+| credit-only K.157 变体 `/private/tmp/scoremind-review-credit-only.musicxml` 上传与分析 | 显示标题 `String Quartet No.4 in C major`、副标题 `K.157`、作者 `Wolfgang Amadeus Mozart`；谱面 SVG 和书面第 1 小节定位均正常 |
+| credit-only 变体全文展开后，视口 320 / 390 / 430 / 844 / 1280px | 页面 `scrollWidth` 分别为 **320 / 390 / 430 / 844 / 1280**；320px 下文件标签高 110px、表单高 214px；谱面非空且定位可用 |
+| K.80 上传、分析、生成解释与展开 | 仍显示独立拍点事件和 `partial` 提示；全文收起与展开时 `scrollWidth=390`，浏览器未见错误/警告 |
+
+credit-only 复现变体由获许可 K.157 原件移除 `work`、`movement-title` 和 `identification/creator` 构成，保留原音符、`credit-type` 与 `credit-words`。该临时文件用于检验合法元数据回退，不作为新增专业标准答案；可按此步骤从仓库原件重建。本轮没有修改原始 fixture 或上传内容。
+
+最终自动验证：后端 Python 3.13.11 **94 passed**（既有 RequestsDependencyWarning 1 条），前端 **60 passed**（含新增 4 项题注回退、2 项解释收起/转义回归），生产构建与类型检查通过。构建前已停止前端预览，构建后再启动。上述结果未完成实体 iPhone 原始 `.musicxml` 选择器复测、小米触控或新的 JSON 下载回导，继续保持待验。
+
+### 前一轮记录
+
 - 后端 `/opt/miniconda3/bin/python3 -m pytest`：Python 3.13.11，**94 passed**，现有 RequestsDependencyWarning 1 条。
 - 前端 `npm test`：**49 passed**。
 - 前端 `npm run build`：Next.js 15.5.15 构建、类型检查和静态页面生成通过。构建前停止生产预览，避免并发写 `.next`；构建后重新启动并在 Edge 核对 `MVP 3.15`。

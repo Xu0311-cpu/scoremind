@@ -350,6 +350,7 @@ h3 {
   line-height: 1.45;
 }
 .score-title { font-size: 18px; line-height: 1.3; }
+.score-subtitle { white-space: pre-wrap; }
 .score-credits details { color: var(--muted); font-size: 13px; }
 .score-credits details p { margin: 6px 0; overflow-wrap: anywhere; }
 .score-preview-viewport {
@@ -393,7 +394,10 @@ h3 {
 .reading-events li { padding-left: 2px; overflow-wrap: anywhere; }
 .reading-events strong, .reading-events span, .reading-events small { display: block; line-height: 1.45; }
 .reading-events small { color: var(--muted); }
-.reading-explanation { margin: 12px 0 0; line-height: 1.55; overflow-wrap: anywhere; }
+.explanation-result { margin-top: 14px; min-width: 0; max-width: 100%; overflow-wrap: anywhere; line-height: 1.55; }
+.explanation-result h4 { margin: 0 0 6px; }
+.explanation-result p { margin: 8px 0; }
+.explanation-details, .explanation-section { min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
 .reading-limitation { margin: 12px 0 0; color: var(--muted); font-size: 13px; }
 .expert-workspace[hidden] { display: none; }
 .text-button { border: 0; background: transparent; color: var(--accent-dark); padding: 0 3px; text-decoration: underline; }
@@ -678,6 +682,7 @@ tr:last-child td {
 
 .section-list {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 12px;
 }
 
@@ -999,6 +1004,7 @@ tr:last-child td {
 
   .file-control {
     min-width: 0;
+    flex: 0 1 auto;
   }
 
   .current-measure-reading .panel-header { flex-direction: row; align-items: flex-start; }
