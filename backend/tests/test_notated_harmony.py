@@ -1,3 +1,4 @@
+from collections import Counter
 from copy import deepcopy
 from fractions import Fraction
 from pathlib import Path
@@ -19,6 +20,27 @@ def upload(name, xml=None):
     response = client.post("/api/v1/analyze/musicxml", files={"file": (name, xml if xml is not None else (FIXTURES / name).read_bytes(), "application/xml")})
     assert response.status_code == 200, response.text
     return response.json()
+
+
+def repeated_chord_xml(measure_count):
+    """Scale a project-authored fixture, not a repertoire accuracy reference."""
+    root = ET.fromstring((FIXTURES / "notated_harmony_inversions.musicxml").read_bytes())
+    part = root.find("part")
+    template = deepcopy(part.find("measure"))
+    template.find("attributes/divisions").text = "2"
+    notes = template.findall("note")
+    for note in notes:
+        note.find("duration").text = "1"
+        template.remove(note)
+    for _ in range(8):
+        template.extend(deepcopy(notes))
+    for measure in part.findall("measure"):
+        part.remove(measure)
+    for index in range(1, measure_count + 1):
+        measure = deepcopy(template)
+        measure.set("number", str(index))
+        part.append(measure)
+    return ET.tostring(root)
 
 
 def test_k157_fixed_positive_and_negative_without_editing_original_notes():
@@ -215,3 +237,133 @@ def test_computed_rest_only_is_distinct_from_not_computed():
     h = upload("timeline_empty.musicxml")["notated_harmony"]
     assert h["status"] == "available" and all(s["status"] == "silent" for s in h["slices"])
     assert analyze_notated_harmony(None) is None
+
+
+def test_large_musicxml_upload_retains_every_rearticulation_and_source():
+    data = upload("load-200.musicxml", repeated_chord_xml(200))
+    harmony = data["notated_harmony"]
+    assert harmony["status"] == "available"
+    assert len(harmony["slices"]) == 1600
+    assert len(data["notated_timeline"]["source_notes"]) == 4800
+    assert (harmony["slices"][0]["start"], harmony["slices"][-1]["end"]) == ("0", "800")
+    source_ids = {n["note_id"] for n in data["notated_timeline"]["source_notes"]}
+    seen_events = set()
+    for s in harmony["slices"]:
+        assert (s["status"], s["root"], s["quality"], s["bass"], s["inversion"]) == ("recognized", "C", "major", "C3", 0)
+        assert len(s["notes"]) == 3 and all(n["onset"] == "new" for n in s["notes"])
+        event_ids = {n["event_id"] for n in s["notes"]}
+        assert seen_events.isdisjoint(event_ids)
+        seen_events.update(event_ids)
+        assert all(len(n["source_note_ids"]) == 1 and n["source_note_ids"][0] in source_ids for n in s["notes"])
+
+
+def test_exact_time_parsing_is_request_local_and_cached_across_validation_and_output(monkeypatch):
+    from app.music import notated_harmony
+    from app.music.notated_timeline import build_notated_timeline
+    from app.music.timeline_normalizer import normalize_musicxml
+
+    timelines = [build_notated_timeline(normalize_musicxml(repeated_chord_xml(n))) for n in [20, 40]]
+    original_time = notated_harmony._time
+    calls = Counter()
+
+    def counted_time(value):
+        calls[value] += 1
+        return original_time(value)
+
+    monkeypatch.setattr(notated_harmony, "_time", counted_time)
+    sizes = []
+    for t in timelines:
+        calls.clear()
+        result = analyze_notated_harmony(t)
+        assert result.status == "available" and result.slices
+        assert calls and max(calls.values()) == 1
+        sizes.append(sum(calls.values()))
+    assert sizes[1] <= 2 * sizes[0]
+    calls.clear()
+    assert analyze_notated_harmony(timelines[0]).status == "available"
+    assert calls["0"] == 1  # A previous request must not seed a global time cache.
+
+
+@pytest.mark.parametrize("damage,code", [
+    ("duplicate_event", "slice_source_mismatch"),
+    ("duplicate_source", "slice_source_mismatch"),
+    ("missing_active_source", "slice_source_mismatch"),
+    ("missing_measure", "slice_measure_mismatch"),
+    ("interior_boundary", "unsplit_note_boundary"),
+    ("partition_gap", "invalid_slice_partition"),
+    ("cross_silent_measure", "slice_measure_mismatch"),
+])
+def test_sweep_still_rejects_false_slice_claims(damage, code):
+    t = NotatedTimeline.model_validate(upload("timeline_overlap.musicxml")["notated_timeline"])
+    if damage == "duplicate_event":
+        t.slices[0].active_event_ids *= 2
+    elif damage == "duplicate_source":
+        t.slices[0].source_note_ids *= 2
+    elif damage == "missing_active_source":
+        t.slices[1].source_note_ids.pop()
+    elif damage == "missing_measure":
+        t.slices[0].measure_ids = []
+    elif damage == "interior_boundary":
+        t.slices[0].end = "2"
+        t.slices.pop(1)
+    elif damage == "partition_gap":
+        t.slices.pop(0)
+    else:
+        index = next(i for i, s in enumerate(t.slices) if s.start == "7")
+        t.slices[index].end = "12"
+        t.slices.pop(index + 1)
+    harmony = analyze_notated_harmony(t)
+    assert harmony.status == "unavailable" and harmony.slices == []
+    assert harmony.diagnostics[0].code == code
+
+
+def test_sweep_checks_fragment_boundaries_inside_one_continuous_tie_event():
+    root = ET.fromstring((FIXTURES / "notated_harmony_ties.musicxml").read_bytes())
+    for measure in root.findall("part/measure")[:3]:
+        for note in measure.findall("note"):
+            if note.findtext("pitch/step") != "C":
+                measure.remove(note)
+    t = NotatedTimeline.model_validate(upload("tie-only.musicxml", ET.tostring(root))["notated_timeline"])
+    assert analyze_notated_harmony(t).status == "available"
+    assert t.sustained_events[0].end == "12"
+    t.slices[0].end = "8"
+    t.slices.pop(1)
+    harmony = analyze_notated_harmony(t)
+    assert harmony.status == "unavailable" and harmony.slices == []
+    assert harmony.diagnostics[0].code == "unsplit_note_boundary"
+
+
+def test_explanation_discloses_k157_excerpt_range_and_omissions():
+    data = upload("professional/mozart_k157_opening.musicxml")
+    response = client.post("/api/v1/explain/analysis", json={"analysis": data})
+    assert response.status_code == 200
+    result = response.json()
+    assert "32 个时间片中识别了 16 个区间" in result["summary"]
+    for text in [result["summary"], result["sections"][0]["text"]]:
+        assert "前 8/32 个时间片（书面第 1 小节）" in text
+        assert "其余 24 个时间片未展开" in text
+    assert "[2,5/2)" in result["sections"][0]["text"]
+    assert "书面第 2 小节，四分音符偏移" not in result["sections"][0]["text"]
+
+
+def test_explanation_excerpt_range_is_written_order_across_measures():
+    data = upload("notated_harmony_inversions.musicxml")
+    result = client.post("/api/v1/explain/analysis", json={"analysis": data}).json()
+    text = result["sections"][0]["text"]
+    assert "前 8/14 个时间片（书面第 1 至 8 小节）" in text
+    assert "其余 6 个时间片未展开" in text
+
+
+def test_small_and_empty_explanations_do_not_claim_omissions():
+    for name in ["timeline_overlap.musicxml", "timeline_empty.musicxml"]:
+        data = upload(name)
+        response = client.post("/api/v1/explain/analysis", json={"analysis": data})
+        assert response.status_code == 200
+        text = response.json()["sections"][0]["text"]
+        total = len(data["notated_harmony"]["slices"])
+        assert total <= 8 and f"已展示全部 {total} 个时间片" in text
+        assert "未展开" not in text
+    data["notated_harmony"]["slices"] = []
+    empty = client.post("/api/v1/explain/analysis", json={"analysis": data})
+    assert empty.status_code == 200
+    assert empty.json()["sections"][0]["text"] == "已计算，但没有持续音时间片。"

@@ -95,8 +95,71 @@
 
 ### 交付验证结果与限制
 
-以最终运行记录为准：后端基线 94 项，当前 **122 项通过**；前端基线 60 项，当前 **66 项通过**；`npm run build` 通过。本机 Python 为 `/opt/miniconda3/bin/python3` 3.13.11（满足 3.11+）；保留已有 RequestsDependencyWarning，没有添加或升级依赖。远端 Python 3.11 CI 未运行，本轮不推送。
+`ac0b322` 首次交付：后端基线 94 项，当时 **122 项通过**；前端基线 60 项，当时 **66 项通过**；`npm run build` 通过。本机 Python 为 `/opt/miniconda3/bin/python3` 3.13.11（满足 3.11+）；保留已有 RequestsDependencyWarning，没有添加或升级依赖。远端 Python 3.11 CI 未运行，本轮不推送。复审加固后的当前结果见下节。
 
 仍待实体 iPhone Safari 复测原扩展名、完整作品标题、简短解释，小米触控验收也未完成。本机浏览器不能替代设备型号/系统/浏览器版本及实际触控结果；3.15 仍是未完成验收的依赖。
 
-首版不使用 partial 的局部片段，包含仅有重复显示编号诊断的情况；不转换实音，不选择对称集合的根音，不自动排除非和弦音，不添加罗马数字/功能/音符角色/置信度继承。全谱严格核对来源和网格，尚未做长谱负载基准；逐时间片结果未压缩，不跨越静默、未知、重奏或转位。没有整体准确率、结构和声、演奏时值、反复展开或声部进行的能力声明。
+首版不使用 partial 的局部片段，包含仅有重复显示编号诊断的情况；不转换实音，不选择对称集合的根音，不自动排除非和弦音，不添加罗马数字/功能/音符角色/置信度继承。全谱严格核对来源和网格；逐时间片结果未压缩，不跨越静默、未知、重奏或转位。没有整体准确率、结构和声、演奏时值、反复展开或声部进行的能力声明。
+
+## ac0b322 复审加固
+
+### 来源校验性能
+
+复审提供的 `/private/tmp/scoremind-316-load-200.musicxml` 为 536376 字节，SHA-256 `bd070a5edd70aa6e11caf3c41f22d2397316d45d4a65e37a1bc7dfee19a72835`。它是 200 个 4/4 小节、每小节 8 次 C 大三和弦重奏的结构性压力输入，不是专业和声金标准；临时文件不提交仓库。测试通过 `repeated_chord_xml()` 从项目原创 fixture 生成相同规模的合法 XML，不扩充第三方素材。
+
+同机 Python 3.13.11、单次调用计时；时间轴均以 `build_notated_timeline(normalize_musicxml(xml))` 构建，识别单独计 `analyze_notated_harmony(timeline)`，不计 JSON 序列化。100 小节样本从同一 XML 截取前 100 小节；修复前在 `ac0b322`，修复后在本次工作树测量。
+
+| 小节 / 来源音 / 时间片 | 修复前时间轴 | 修复前新模块 | 修复后时间轴 | 修复后新模块 |
+| --- | --- | --- | --- | --- |
+| 100 / 2400 / 800 | 0.0595 s | 7.5265 s | 0.0682 s | 0.0899 s |
+| 200 / 4800 / 1600 | 0.1211 s | 30.1025 s | 0.1373 s | 0.1773 s |
+
+序列化 `json.dumps(result.model_dump(), sort_keys=True, ensure_ascii=False)` 后的 SHA-256 在前后完全相同：
+
+```text
+100: 8034b539526fa93ff569208eb6cca36211a7fcefe82f24aa5807761f79f85ec3
+200: e4641f03298a02b4ca3269a685e3e3ce418530587fda6554af238580d758bbd7
+```
+
+实现保留完整校验：请求内缓存各规范 Fraction，独立扫描事件、原片段和小节的排序边界，先结束后起音；每片仍比较真实活动 ID、来源、静默状态和小节归属，不能跳过内部边界。来源到事件的索引替代逐次筛选完整 tie 链。识别规则、固定 K.157 正反例、输出契约和旧分析版本未改。
+
+复现计时的核心命令（在 backend 下执行；临时文件不存在时可用测试中的 `repeated_chord_xml` 生成压力输入）：
+
+```python
+from pathlib import Path
+import xml.etree.ElementTree as ET
+from time import perf_counter
+from app.music.timeline_normalizer import normalize_musicxml
+from app.music.notated_timeline import build_notated_timeline
+from app.music.notated_harmony import analyze_notated_harmony
+
+raw = Path('/private/tmp/scoremind-316-load-200.musicxml').read_bytes()
+for count in (100, 200):
+    root = ET.fromstring(raw)
+    for part in root.findall('part'):
+        for measure in part.findall('measure')[count:]:
+            part.remove(measure)
+    xml = ET.tostring(root)
+    start = perf_counter()
+    timeline = build_notated_timeline(normalize_musicxml(xml))
+    middle = perf_counter()
+    result = analyze_notated_harmony(timeline)
+    print(count, middle - start, perf_counter() - middle, result.status)
+```
+
+实际环回 HTTP 上传原临时 200 小节文件：200 OK，约 **1.7425 秒**（包含旧路径、组装、传输），返回 `available`、1600 片、4800 来源。响应体 **9575549 字节**；大响应、复杂长谱、长 tie 链证据量、多用户并发和手机网络均未由这一输入验证。没有修改同步请求架构，不宣称总耗时始终线性或所有长谱均已达标。
+
+### 解释展示范围
+
+K.157 的计数仍是全曲 32 片 / 16 个已识别区间。响应 summary 和新模块段落同时注明：
+
+> 逐区间文字仅节选前 8/32 个时间片（书面第 1 小节）；其余 24 个时间片未展开。完整结果请按小节查看读谱或学习报告。
+
+这不是把前 8 片当成整曲；不静默丢弃范围。少于或等于 8 片说明全部展示，跨书面小节的节选列明首尾索引，空或不可用结果不编造省略数量。学习报告本来就保留全部新模块区间，本轮不删减。
+
+### 加固验证结果
+
+- 后端 **135 项通过**，前端 **66 项通过**，生产构建与 `git diff --check` 通过。版本继续为 3.16.0 / 旧分析 3.11.0；没有新增依赖或修改前端代码。
+- 新增 13 项回归：200 小节真实 XML 经上传 API、请求内分数只解析一次且不跨请求缓存、重复/缺失活动来源、遗漏内部起音/结束边界、静默跨小节、tie 内部来源边界、分区缺口，以及 32/14/短谱/空结果的解释范围。没有放宽已有拒绝断言。
+- 补充直接载入 `ac0b322` 旧模块对照 K.157、K.80、转位、tie、错开起音、静默、损坏 tie、移调、零时值、重复编号、错位 part 和缺失身份共 12 份 fixture：新模块完整 `model_dump()` 前后相同；这是额外的输出等价核对，不计为新增 pytest 项数。
+- 本机生产构建浏览器重新分析原始 K.157：正反例仍正确；展开模板后实际可读到前 8/32、书面第 1 小节、其余 24 片；390px 时展开状态下 `scrollWidth=innerWidth=390`。视口最后已恢复。非实体设备，不升级 3.15 的 iPhone/小米验收状态，本轮未做下载落盘回导。

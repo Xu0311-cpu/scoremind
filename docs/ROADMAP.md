@@ -5,6 +5,7 @@ This roadmap describes future work. Items listed here are not current MVP 3.16 c
 ## Validation In Progress
 
 - MVP 3.16 本地候选：完整记谱持续音集合的独立和弦识别 v1，默认读谱/解释/报告按来源展示；K.157 两个指定区间的预期在实现前固定。依赖尚未合并的 3.15 修复 `0aaf933`，待独立复审，不合并 PR #10，不宣称总体准确率。见 [`SUSTAINED_HARMONY_VALIDATION.md`](SUSTAINED_HARMONY_VALIDATION.md)。
+  复审加固已本地验证：来源边界扫描与请求内分数缓存、解释节选范围/省略数量提示；复杂长谱、响应体积和多用户并发仍需后续验证，不扩大本轮乐理范围。
 
 - MVP 3.15 候选：390px Edge 指针环境完成部分移动可用性矩阵与 JSON 回导；用户后来在实体 iPhone 发现 `.musicxml` 文件置灰和标题裁切，本地已修复候选但原机复测未完成。小米 Chrome、浏览器取消换谱也仍待验。**真实手机触控验收尚未通过，不计入已完成里程碑。** 无新乐理或上传格式能力；详见 [`MOBILE_VALIDATION_3_15.md`](MOBILE_VALIDATION_3_15.md)。
 

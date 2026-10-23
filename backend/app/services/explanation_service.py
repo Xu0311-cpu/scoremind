@@ -4,9 +4,11 @@ from typing import Protocol
 
 from app.schemas.analysis import DetectedChord, MusicXMLAnalysisResponse
 from app.schemas.explanation import ExplanationResponse, ExplanationSection
+from app.schemas.notated_harmony import NotatedHarmony
 
 
 EXPLANATION_VERSION = "3.16.0"
+HARMONY_EXCERPT_LIMIT = 8
 EXPLANATION_WARNINGS = [
     "This explanation is template-generated from deterministic analysis output.",
     "No LLM is called in MVP 3.16.",
@@ -41,6 +43,8 @@ class TemplateExplanationProvider:
             recognized = sum(s.status == "recognized" for s in harmony.slices)
             summary = (f"记谱持续音模块 {harmony.analyzer_version} 在 {len(harmony.slices)} 个时间片中识别了 {recognized} 个区间；区间数不是独立和弦个数。"
                        if harmony.status == "available" else "记谱持续音识别不可用：" + "、".join(d.code for d in harmony.diagnostics) + "。")
+            if harmony.status == "available" and len(harmony.slices) > HARMONY_EXCERPT_LIMIT:
+                summary += " " + _harmony_excerpt_notice(harmony)
             return ExplanationResponse(
                 analysis_version=analysis.analysis_version, notated_harmony_version=harmony.analyzer_version,
                 explanation_version=EXPLANATION_VERSION, language=language, level=level,
@@ -71,14 +75,24 @@ class TemplateExplanationProvider:
         )
 
 
+def _harmony_excerpt_notice(harmony: NotatedHarmony) -> str:
+    total = len(harmony.slices)
+    if total <= HARMONY_EXCERPT_LIMIT:
+        return f"逐区间说明已展示全部 {total} 个时间片。" if total else ""
+    first, last = harmony.slices[0].measure_index, harmony.slices[HARMONY_EXCERPT_LIMIT - 1].measure_index
+    location = f"书面第 {first} 小节" if first == last else f"书面第 {first} 至 {last} 小节"
+    return (f"逐区间文字仅节选前 {HARMONY_EXCERPT_LIMIT}/{total} 个时间片（{location}）；"
+            f"其余 {total - HARMONY_EXCERPT_LIMIT} 个时间片未展开。完整结果请按小节查看读谱或学习报告。")
+
+
 def _notated_harmony_text(analysis: MusicXMLAnalysisResponse) -> str:
     harmony = analysis.notated_harmony
     if harmony.status == "unavailable":
         return "当前记谱持续音输入不可安全分析：" + "；".join(d.message for d in harmony.diagnostics)
     quality_names = {"major": "大三和弦", "minor": "小三和弦", "diminished": "减三和弦", "dominant_seventh": "属七和弦", "major_seventh": "大七和弦", "minor_seventh": "小七和弦", "half_diminished_seventh": "半减七和弦", "minor_major_seventh": "小大七和弦"}
     inversions = ["原位", "第一转位", "第二转位", "第三转位"]
-    lines = []
-    for s in harmony.slices[:8]:
+    lines = [_harmony_excerpt_notice(harmony)] if harmony.slices else []
+    for s in harmony.slices[:HARMONY_EXCERPT_LIMIT]:
         location = f"书面第 {s.measure_index} 小节，四分音符偏移 [{s.local_start},{s.local_end})"
         if s.status == "recognized":
             if not s.root or not s.bass or s.quality not in quality_names or s.inversion is None:
