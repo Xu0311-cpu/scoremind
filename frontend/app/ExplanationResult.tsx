@@ -1,4 +1,5 @@
 export type TemplateExplanation = {
+  notated_harmony_version?: string | null;
   explanation_version: string;
   summary: string;
   sections: { title: string; text: string }[];
@@ -17,6 +18,7 @@ export default function ExplanationResult({ result, keyText, noteText }: {
     <details className="secondary-details explanation-details">
       <summary>完整模板解释、限制与诊断</summary>
       <p className="panel-note">解释版本：{result.explanation_version}</p>
+      {result.notated_harmony_version && <p className="panel-note">持续音和弦模块：{result.notated_harmony_version}；旧起音标签为独立技术参考。</p>}
       <p className="summary-text">{result.summary}</p>
       <div className="section-list">
         {result.sections.map((section, index) => <section key={`${index}-${section.title}`} className="explanation-section">

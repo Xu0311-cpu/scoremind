@@ -15,9 +15,11 @@ import { readRevealMarker, requestMachineReveal } from "./harmonicReveal";
 import type { VerifiedScoreStructure } from "./scoreStructure";
 import { MAX_REVIEW_BYTES, deleteReviewRecord, parseReviewPackage, readReviewDraft, reviewScopeFromTimeline, serializeReviewPackage, upsertReviewRecord, writeReviewDraft, type ReviewRecord, type ReviewScope } from "./reviewRecords";
 import { initialMeasureIndex, writtenMeasureOptions } from "./scoreMeasureNavigation";
-import { chordEventLabel, currentMeasureReading } from "./currentMeasureReading";
+import { currentMeasureReading } from "./currentMeasureReading";
 import { isSupportedScoreFile } from "./scoreFileSelection";
 import ExplanationResult from "./ExplanationResult";
+import SustainedHarmonyReading from "./SustainedHarmonyReading";
+import { harmonySummary, notatedHarmonyReport, type NotatedHarmony } from "./notatedHarmony";
 
 type KeyAnalysis = {
   tonic: string | null;
@@ -89,6 +91,7 @@ type MeasureAnalysis = {
 };
 
 type MusicXMLAnalysisResponse = {
+  notated_harmony?: NotatedHarmony | null;
   notated_timeline?: NotatedTimelineData | null;
   file_name: string;
   analysis_version: string;
@@ -103,6 +106,7 @@ type ExplanationSection = {
 };
 
 type ExplanationResponse = {
+  notated_harmony_version?: string | null;
   explanation_version: string;
   summary: string;
   sections: ExplanationSection[];
@@ -840,7 +844,7 @@ export default function Home() {
       <section className="workspace">
         <header className="page-header">
           <div>
-            <p className="eyebrow">MVP 3.15</p>
+            <p className="eyebrow">MVP 3.16</p>
             <h1>ScoreMind</h1>
             <p className="product-subtitle">AI Music Score Understanding</p>
           </div>
@@ -888,27 +892,17 @@ export default function Home() {
                 <div className="panel-header">
                   <div>
                     <h3>当前书面小节 {selectedMeasureIndex ?? "未定位"}</h3>
-                    <p className="panel-note">和弦结果对应各自起音位置，并非整小节唯一和声。</p>
+                    <p className="panel-note">逐区间检查同时持续的全部记谱音，不代表整小节唯一和声。</p>
                   </div>
                   <button type="button" className="secondary-button" onClick={openTechnicalEvidence}>查看依据</button>
                 </div>
-                {!previewLocation.located ? <p className="timeline-caution">{previewLocation.reason ?? "谱面尚未可靠定位，暂不关联当前小节结论。"}</p> : selectedReading.reason ? <p className="timeline-caution">{selectedReading.reason}</p> : selectedReading.measure && <>
-                  <p className="reading-measure-label">谱面显示编号：{selectedReading.measure.measure_number}</p>
-                  {analysis.notated_timeline?.status !== "complete" && <p className="timeline-caution">
-                    {analysis.notated_timeline?.status === "partial" ? "记谱时间轴仅部分可靠" : "记谱时间轴未提供可靠完整结果"}；以下和弦仍来自原有同起点检测，来源核对请见技术证据。
-                  </p>}
-                  {selectedReading.measure.detected_chords.length ? <ol className="reading-events">
-                    {selectedReading.measure.detected_chords.map((chord, index) => <li key={`${chord.beat}-${index}`}>
-                      <strong>{chord.beat === null ? "位置未提供" : `第 ${chord.beat} 拍`} · {chordEventLabel(chord)}</strong>
-                      <span>{chord.roman_numeral ? `级数 ${chord.roman_numeral}` : "级数暂不确定"}；{chord.harmonic_function !== "unknown" ? `功能 ${formatHarmonicFunctionForStudent(chord.harmonic_function)}` : "功能暂不确定"}</span>
-                      <small>依据：{chord.pitches.join("、") || "无音高来源"}</small>
-                    </li>)}
-                  </ol> : <p className="timeline-caution">本小节没有可展示的同起点和弦结论；不能据此推断整小节没有和声。</p>}
-                </>}
+                <SustainedHarmonyReading harmony={analysis.notated_harmony} measureIndex={selectedMeasureIndex}
+                  located={previewLocation.located} locationReason={previewLocation.reason} />
                 <button type="button" onClick={handleGenerateExplanation} disabled={loadingExplanation}>{loadingExplanation ? "生成中..." : "生成全曲模板解释"}</button>
-                {explanation && studentSummary && <ExplanationResult result={explanation} keyText={studentSummary.keySummary}
-                  noteText={`音符归属分析中，${noteRoleCounts.chordTone} 个音属于所选和声，${noteRoleCounts.nonChordTone} 个是非和弦音候选，${noteRoleCounts.unknown} 个暂不判断。候选提示需要结合谱面核对。`} />}
-                <p className="reading-limitation">结果由确定性后端给出；持续音集合只是记谱观察，不等于新和弦结论。</p>
+                {explanation && studentSummary && <ExplanationResult result={explanation}
+                  keyText={analysis.notated_harmony ? harmonySummary(analysis.notated_harmony) : `旧起音分析：${studentSummary.keySummary}`}
+                  noteText={analysis.notated_harmony ? "持续音识别尚未计算罗马数字、和声功能或音符角色；旧结果仅供独立技术参考。" : "此旧响应没有持续音和弦字段，不能据此补出新结果。"} />}
+                <p className="reading-limitation">这是完整记谱音集合的保守匹配；额外音不会被自动排除，未知不等于没有和声。</p>
               </section>}
               <ScorePreview key={fileRevision} xml={musicXmlText} timeline={machineRevealed ? analysis?.notated_timeline : null}
                 selectedMeasureIndex={selectedMeasureIndex} navigationToken={navigationToken}
@@ -916,6 +910,7 @@ export default function Home() {
                 onStructureChange={(structure, reason) => { setScoreStructure(structure); setStructureReason(reason); if (structure) setSelectedMeasureIndex((current) => current ?? 1); }} />
               <div hidden={workspaceMode !== "expert"} className="expert-workspace">
               <p className="panel-note">人工意见与机器分析分开保存，不会改变学习报告或算法置信度。</p>
+              <p className="timeline-caution">现有人工对照与校审包仍对应旧起音分析 3.11.0，不自动成为持续音模块的校审结论。独立和声标注保持原谱人工记录。</p>
               <HarmonicAnnotation key={`${fileRevision}:${harmonyPackage?.annotation_set_id ?? "loading"}:${harmonyImportRevision}`} structure={scoreStructure}
                 value={harmonyPackage?.file_sha256 === fileFingerprint ? harmonyPackage : null}
                 selectedIndex={selectedMeasureIndex} onSelectIndex={selectWrittenMeasure}
@@ -941,36 +936,31 @@ export default function Home() {
           <section className="panel" ref={analysisPanelRef}>
             <div className="panel-header">
               <div>
-                <h2>Student Analysis / 学生视角分析</h2>
+                <h2>全曲持续音识别概况</h2>
                 <p className="panel-note">
-                  A student-facing reading flow generated only from deterministic backend analysis.
+                  {harmonySummary(analysis.notated_harmony)}
                 </p>
               </div>
             </div>
 
             <dl className="summary-grid">
               <div>
-                <dt>Global Key</dt>
+                <dt>持续音模块版本</dt>
+                <dd>{analysis.notated_harmony?.analyzer_version ?? "未计算"}</dd>
+              </div>
+              <div>
+                <dt>已识别区间数</dt>
+                <dd>{analysis.notated_harmony?.status === "available" ? analysis.notated_harmony.slices.filter((s) => s.status === "recognized").length : "不可分析"}</dd>
+              </div>
+              <div>
+                <dt>未知区间数</dt>
+                <dd>{analysis.notated_harmony?.status === "available" ? analysis.notated_harmony.slices.filter((s) => s.status === "unknown").length : "不可分析"}</dd>
+              </div>
+              <div>
+                <dt>音高与时间</dt>
                 <dd>
-                  {analysis.key_analysis.tonic && analysis.key_analysis.mode
-                    ? `${analysis.key_analysis.tonic} ${analysis.key_analysis.mode}`
-                    : "Unavailable"}
-                  <span className="summary-subtext">Confidence: {analysis.key_analysis.confidence ?? "N/A"}</span>
-                </dd>
-              </div>
-              <div>
-                <dt>Detected Chords</dt>
-                <dd>{detectedChordCount}</dd>
-              </div>
-              <div>
-                <dt>Analyzed Notes</dt>
-                <dd>{noteRoleCounts.total}</dd>
-              </div>
-              <div>
-                <dt>Current Scope / Reliability</dt>
-                <dd>
-                  Deterministic MusicXML analysis
-                  <span className="summary-subtext">Same-offset first; carried context is conservative.</span>
+                  记谱音 · 四分音符单位
+                  <span className="summary-subtext">精确分数区间 [start,end)</span>
                 </dd>
               </div>
             </dl>
@@ -981,7 +971,7 @@ export default function Home() {
                 className={analysisView === "student" ? "active" : ""}
                 onClick={() => setAnalysisView(analysisView === "student" ? "none" : "student")}
               >
-                {analysisView === "student" ? "收起全曲学习路径" : "展开全曲学习路径"}
+                {analysisView === "student" ? "收起旧起音学习路径" : "旧起音学习路径（技术参考）"}
               </button>
               <button
                 type="button"
@@ -994,6 +984,7 @@ export default function Home() {
 
             {analysisView === "student" && studentSummary && (
               <section className="student-view" aria-label="Student-friendly analysis summary">
+                <p className="timeline-caution">以下学习路径来自旧起音分析 {analysis.analysis_version}，不解释新持续音和弦；旧音符角色、级数和功能没有升级为新模块结论。</p>
                 <div className="student-card">
                   <h3>整体调性</h3>
                   <p>{studentSummary.keySummary}</p>
@@ -1113,6 +1104,8 @@ export default function Home() {
             {analysisView === "technical" && (
               <>
                 <h3>Technical Evidence / 技术证据</h3>
+                <p className="panel-note">旧起音检测版本 {analysis.analysis_version}：{detectedChordCount} 个旧事件，{noteRoleCounts.total} 个旧音符角色。新持续音模块使用独立区间与来源，不继承这些标签。</p>
+                <p className="panel-note">当前书面索引的旧起音参考：{selectedReading.measure ? `${selectedReading.measure.detected_chords.length} 个旧事件` : selectedReading.reason}</p>
                 <p className="panel-note">
                   Detailed cards, filters, evidence, warnings, and validation hints for checking the deterministic result.
                 </p>
@@ -1153,6 +1146,7 @@ export default function Home() {
                     <dt>Analysis Version</dt>
                     <dd>{analysis.analysis_version}</dd>
                   </div>
+                  <div><dt>旧全局调性（独立于新模块）</dt><dd>{analysis.key_analysis.tonic && analysis.key_analysis.mode ? `${analysis.key_analysis.tonic} ${analysis.key_analysis.mode}` : "不可用"}</dd></div>
                 </dl>
                 <NoteSummaryGrid summary={noteRoleCounts} />
 
@@ -1833,6 +1827,21 @@ function generateMarkdownReport(
   explanation: ExplanationResponse | null,
   measures: MeasureAnalysis[],
 ) {
+  if (analysis.notated_harmony) {
+    const lines = [notatedHarmonyReport(analysis.file_name, analysis.analysis_version, analysis.notated_harmony, explanation?.explanation_version ?? null),
+      "## 旧起音分析（独立技术参考）", "", `版本 ${analysis.analysis_version}。以下罗马数字、功能和音符角色均未使用新持续音和弦。旧人工意见不进入报告。`, "",
+      `旧全局调性：${analysis.key_analysis.tonic && analysis.key_analysis.mode ? `${analysis.key_analysis.tonic} ${analysis.key_analysis.mode}` : "不可用"}`, "",
+      ...formatNoteSummaryForMarkdown(summarizeNotes(analysis.measures.flatMap((m) => m.analyzed_notes ?? []))), ""];
+    for (const m of analysis.measures) {
+      lines.push(`### 旧分析：书面索引 ${m.measure_index ?? "未提供"} · 显示编号 ${m.measure_number}`, "");
+      lines.push(...formatNoteSummaryForMarkdown(summarizeNotes(m.analyzed_notes ?? [])));
+      for (const c of m.detected_chords) lines.push(`- 旧起音事件，拍点 ${c.beat ?? "未提供"}：${c.pitches.join(", ")}；${c.root ?? "根音未知"} ${c.quality}；旧罗马数字 ${c.roman_numeral ?? "未知"}；旧功能 ${c.harmonic_function}`);
+      lines.push("");
+    }
+    if (explanation) lines.push("## 模板解释来源", "", explanation.summary, "");
+    lines.push("## 原后端警告（旧路径与新模块边界）", "", ...analysis.warnings.map((w) => `- ${w}`));
+    return lines.join("\n");
+  }
   const globalNoteSummary = summarizeNotes(analysis.measures.flatMap((measure) => measure.analyzed_notes ?? []));
   const measuresWithNoteAnalysis = analysis.measures.filter((measure) => (measure.analyzed_notes ?? []).length > 0);
   const studentSummary = buildStudentSummary(analysis);
@@ -1841,7 +1850,7 @@ function generateMarkdownReport(
       ? `${analysis.key_analysis.tonic} ${analysis.key_analysis.mode}`
       : "Unavailable";
   const lines = [
-    "# AI Music Score Understanding Learning Report",
+    "# ScoreMind 旧起音分析学习报告（未计算持续音和弦）",
     "",
     "## Metadata",
     "",

@@ -1,8 +1,10 @@
 # Roadmap
 
-This roadmap describes future work. Items listed here are not current MVP 3.15 capabilities unless explicitly implemented elsewhere.
+This roadmap describes future work. Items listed here are not current MVP 3.16 capabilities unless explicitly implemented elsewhere.
 
 ## Validation In Progress
+
+- MVP 3.16 本地候选：完整记谱持续音集合的独立和弦识别 v1，默认读谱/解释/报告按来源展示；K.157 两个指定区间的预期在实现前固定。依赖尚未合并的 3.15 修复 `0aaf933`，待独立复审，不合并 PR #10，不宣称总体准确率。见 [`SUSTAINED_HARMONY_VALIDATION.md`](SUSTAINED_HARMONY_VALIDATION.md)。
 
 - MVP 3.15 候选：390px Edge 指针环境完成部分移动可用性矩阵与 JSON 回导；用户后来在实体 iPhone 发现 `.musicxml` 文件置灰和标题裁切，本地已修复候选但原机复测未完成。小米 Chrome、浏览器取消换谱也仍待验。**真实手机触控验收尚未通过，不计入已完成里程碑。** 无新乐理或上传格式能力；详见 [`MOBILE_VALIDATION_3_15.md`](MOBILE_VALIDATION_3_15.md)。
 
@@ -39,7 +41,7 @@ This roadmap describes future work. Items listed here are not current MVP 3.15 c
 ## Mid Term
 
 - Strengthen note-level analysis while remaining conservative.
-- Evaluate future use of the notated timeline in harmony analysis; existing harmony still uses onset sets and within-measure carried context.
+- 在独立验证后扩大持续音识别适用范围：对称根音集合、可靠的非和弦音处理与 partial 时间轴的局部可用性均属后续工作；旧和声/音符路径继续使用起音集合及小节内前序上下文。
 - Extend explicit support for cross-staff ties, asymmetric part grids, grace timing, concert-pitch conversion, and performance/repeat semantics only after separate validation.
 - Expand supported chord and Roman numeral cases.
 - Add more robust confidence and warning signals.
@@ -56,4 +58,4 @@ This roadmap describes future work. Items listed here are not current MVP 3.15 c
 
 ## Current Boundary
 
-The current score input is MusicXML/XML only. MVP 3.15 documents narrow-screen validation, not new score input or analysis. Conservative non-chord tone candidate hints remain learning aids; the runtime app still does not perform OMR, PDF/image upload, MIDI/audio analysis, local modulation, full classical non-chord tone classification, full sustained harmony inference, melody analysis, voice-leading analysis, or jazz/modern harmony analysis. Time-slice pitch observations are not harmony classifications.
+The current score input is MusicXML/XML only. MVP 3.16 adds strict chord matching of complete sustained written-pitch sets, not full structural or phrase-level harmony inference. Legacy note roles and Roman/function labels remain independent. Conservative NCT hints remain learning aids; runtime OMR, PDF/image upload, MIDI/audio analysis, modulation, full NCT classification, melody/voice-leading and jazz analysis remain unsupported. Raw time-slice observations are not themselves harmony classifications.

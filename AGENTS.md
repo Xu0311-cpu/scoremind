@@ -2,7 +2,7 @@
 
 ## 项目现状
 
-ScoreMind 是面向音乐学习者的确定性 MusicXML 乐谱分析系统。当前版本为 MVP 3.15，运行时乐谱输入仅接受 `.musicxml` 和 `.xml` 文件。
+ScoreMind 是面向音乐学习者的确定性 MusicXML 乐谱分析系统。当前本地候选为 MVP 3.16，运行时乐谱输入仅接受 `.musicxml` 和 `.xml` 文件。3.16 分支依赖尚未合并的 3.15 修复 `0aaf933`，不得擅自合并 PR #10。
 
 后端负责解析符号化乐谱并生成可审计的结构化分析；前端负责乐谱预览、学习视图、技术证据和 Markdown 学习报告。确定性后端输出是产品的事实来源，解释层和前端不得自行推断新的乐理结论。
 
@@ -31,6 +31,7 @@ ScoreMind 是面向音乐学习者的确定性 MusicXML 乐谱分析系统。当
 - MVP 3.13 在独立人工标注表单中按书面索引显示/导航人工记录状态；未标注位置数与 `unclear/partial/determined` 记录数、两种填写基准分别计算。不将 `determined` 误称整小节穷尽，也不把自述盲标注当金标准或计算准确率。应用版 3.13.0，`analysis_version` 仍为 3.11.0，人工包格式仍为 v1。
 - MVP 3.14 将未保存人工标注草稿提升为页面内按书面索引管理，与已存记录逐字段比较；换谱、Reset、导入覆盖先确认，刷新/离页仅脏态启用浏览器原生提醒。草稿不进入标注包或进度计数，移动端离页提醒不保证触发。应用版 3.14.0，`analysis_version` 仍为 3.11.0，标注包仍为 v1。
 - MVP 3.15 记录 390px Edge 响应式指针检查与 JSON 实际落盘回导；用户后来在实体 iPhone 报告 `.musicxml` 选择器置灰与 K.157 标题裁切。当前分支将默认界面转向读谱、取消选择器过滤但保留格式校验，并将作品元数据移出 OSMD 画布；实体 iPhone 修复复测及小米 Chrome 矩阵仍未完成，不能宣称真实触控通过。应用版仍为 3.15.0，`analysis_version` 继续为 3.11.0；详见 `docs/MOBILE_VALIDATION_3_15.md`。
+- MVP 3.16 新增独立 `notated_harmony` v1（模块/应用 3.16.0）：只在完整、可靠来源的记谱时间轴上严格匹配全部持续音；默认读谱、摘要、解释与报告展示独立区间结论。拒绝不安全输入，不删额外音，不合并不重叠琶音；对称根音多解和拼写冲突保留未知。旧 `analysis_version=3.11.0`、旧校审键、起音和弦、罗马数字、功能、音符角色/NCT 与独立标注 v1 保留；新和弦不继承旧标签。原时间片观察本身仍不是和弦判断，只有新模块匹配结果才是本轮新增的区间识别。固定预期见 `docs/SUSTAINED_HARMONY_VALIDATION.md`。
 - 新时间轴来源以 XML part/staff/voice/instrument 标签为准，不用 music21 随机 ID 或跨小节上下文猜身份。书面小节顺序与显示编号独立，缺失身份或歧义 tie 必须诊断。
 - MVP 3.5 提供经过音/辅助音候选提示；它们只是保守学习提示，置信度固定为 `low`，不能表述为最终乐理结论。MVP 3.6 的持续音时间轴不改变这条边界。
 - 当前没有真实 LLM/OpenAI 调用、数据库、认证、用户系统或持久化任务队列。
@@ -50,6 +51,7 @@ ScoreMind 是面向音乐学习者的确定性 MusicXML 乐谱分析系统。当
 - `backend/app/music/timeline_observations.py`：逐片记谱音观察；最低记谱音比较有保守门槛。
 - `backend/app/schemas/timeline.py`：独立时间轴契约；旧载荷缺省为 null，与计算后空结果不同。
 - `backend/app/music/chord_analyzer.py`：确定性和弦识别。
+- `backend/app/music/notated_harmony.py`、`backend/app/schemas/notated_harmony.py`：独立持续音和弦匹配、来源/时间校验及 v1 契约；不修改旧起音规则。
 - `backend/app/music/key_analyzer.py`：全局调性分析。
 - `backend/app/music/roman_numeral_analyzer.py`：保守罗马数字与和声功能映射。
 - `backend/app/music/note_analyzer.py`：音符角色、和声上下文和非和弦音候选。
@@ -63,6 +65,7 @@ ScoreMind 是面向音乐学习者的确定性 MusicXML 乐谱分析系统。当
 - `frontend/app/page.tsx`：当前单页产品流程和主要 UI 逻辑。
 - `frontend/app/globals.css`：全局样式。
 - `frontend/app/NotatedTimeline.tsx`：按小节显示时间片、来源和诊断的技术证据视图。
+- `frontend/app/SustainedHarmonyReading.tsx`、`frontend/app/notatedHarmony.ts`：默认读谱的持续音区间、中文理由、来源链与独立学习报告；不继承旧罗马数字或音符角色。
 - `frontend/app/ScorePreview.tsx`、`frontend/app/scoreMeasureNavigation.ts`：客户端 OSMD 渲染、书面小节映射验证、标框与滚动；`WrittenMeasureNavigator.tsx` 提供共享导航。
 - `frontend/app/ExpertReview.tsx`、`frontend/app/reviewRecords.ts`：人工校审界面、独立 JSON 契约及严格导入校验；与分析 API 分开。
 - `frontend/app/HarmonicAnnotation.tsx`、`frontend/app/harmonicAnnotations.ts`、`frontend/app/harmonicReveal.ts`：独立人工和声记录、v1 JSON 契约与机器结果揭示闸门；`scoreStructure.ts` 从原谱/OSMD 核对书面小节结构。

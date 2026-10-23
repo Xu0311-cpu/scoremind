@@ -1,4 +1,8 @@
-# Validation Guide for MVP 3.15
+# Validation Guide for MVP 3.16
+
+## MVP 3.16 持续音和弦验证
+
+先于实现固定的 K.157 正反例、原始 API 投影、边界 fixture 和实际测试结果见 [`SUSTAINED_HARMONY_VALIDATION.md`](SUSTAINED_HARMONY_VALIDATION.md)。新模块只在完整可靠时间轴上匹配全部持续音，保留原起音分析和旧 JSON/校审/独立标注契约，不自动算准确率。3.15 的手机验收状态不因本轮浏览器检查而升级。
 
 ## MVP 3.15 窄屏与实体触控验收
 
