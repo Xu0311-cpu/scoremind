@@ -36,6 +36,24 @@ test("unknown, silence and unavailable input never borrow a recognized label", (
   assert.match(helpers.harmonySummary({ ...harmony, status: "unavailable", diagnostics: [{ code: "timeline_not_complete", message: "incomplete" }] }), /不完整/);
 });
 
+test("unknown reader uses gentle copy while preserving raw reasons in closed evidence only", () => {
+  for (const reason of ["unsupported_pitch_set", "ambiguous_root_candidates", "insufficient_distinct_pitches"]) {
+    const data = { ...harmony, slices: [{ ...slice, status: "unknown", root: null, quality: null, inversion: null, reason_codes: [reason] }] };
+    const before = JSON.stringify(data);
+    const html = renderToStaticMarkup(React.createElement(Reading, { harmony: data, measureIndex: 1, located: true, locationReason: null }));
+    const boundary = html.indexOf("<details");
+    assert.ok(boundary >= 0);
+    assert.ok(html.slice(0, boundary).includes("这里需要结合前后文判断，当前版本暂不能可靠确定和弦。"));
+    assert.ok(!html.slice(0, boundary).includes(reason));
+    assert.ok(!html.slice(0, boundary).includes(helpers.harmonyReason(reason)));
+    assert.ok(html.slice(boundary).includes(`<code>${reason}</code>`));
+    assert.ok(html.slice(boundary).includes(helpers.harmonyReason(reason)));
+    assert.ok(html.slice(boundary).includes("不使用前后文补推和弦"));
+    assert.doesNotMatch(html, /<details[^>]*\sopen(?:[\s=>])/);
+    assert.equal(JSON.stringify(data), before);
+  }
+});
+
 test("written index isolates repeated display numbers and mapping failure hides conclusions", () => {
   const data = { ...harmony, slices: [{ ...slice, measure_index: 2 }, { ...slice, slice_id: "other", measure_index: 3, root: "G" }] };
   const html = renderToStaticMarkup(React.createElement(Reading, { harmony: data, measureIndex: 2, located: true, locationReason: null }));

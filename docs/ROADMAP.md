@@ -4,10 +4,10 @@ This roadmap describes future work. Items listed here are not current MVP 3.16 c
 
 ## Validation In Progress
 
-- MVP 3.16 本地候选：完整记谱持续音集合的独立和弦识别 v1，默认读谱/解释/报告按来源展示；K.157 两个指定区间的预期在实现前固定。依赖尚未合并的 3.15 修复 `0aaf933`，待独立复审，不合并 PR #10，不宣称总体准确率。见 [`SUSTAINED_HARMONY_VALIDATION.md`](SUSTAINED_HARMONY_VALIDATION.md)。
+- MVP 3.16 本地候选：完整记谱持续音集合的独立和弦识别 v1，默认读谱/解释/报告按来源展示；K.157 两个指定区间的预期在实现前固定。`b9bfc25` 已通过独立复审，依赖尚未合并的 3.15 修复 `0aaf933`；本次文案收尾待远端验证，不转 Ready、不合并 PR #10，不宣称总体准确率。见 [`SUSTAINED_HARMONY_VALIDATION.md`](SUSTAINED_HARMONY_VALIDATION.md)。
   复审加固已本地验证：来源边界扫描与请求内分数缓存、解释节选范围/省略数量提示；复杂长谱、响应体积和多用户并发仍需后续验证，不扩大本轮乐理范围。
 
-- MVP 3.15 候选：390px Edge 指针环境完成部分移动可用性矩阵与 JSON 回导；用户后来在实体 iPhone 发现 `.musicxml` 文件置灰和标题裁切，本地已修复候选但原机复测未完成。小米 Chrome、浏览器取消换谱也仍待验。**真实手机触控验收尚未通过，不计入已完成里程碑。** 无新乐理或上传格式能力；详见 [`MOBILE_VALIDATION_3_15.md`](MOBILE_VALIDATION_3_15.md)。
+- 移动验收本阶段聚焦 **iOS Safari**：2026-11-06 用户在 iPhone 17 / iOS 26.3 / Safari、`b9bfc25` 上确认原始 `.musicxml` 选择及分析、K.157 正反区间与可理解性、下一小节谱面联动。标题完整性、旋转、JSON 往返及其余矩阵仍待验，不宣称全部通过。**Android 延期、未验证，不作为本轮阻断。** 无新乐理或上传格式能力；详见 [`MOBILE_VALIDATION_3_15.md`](MOBILE_VALIDATION_3_15.md)。
 
 ## Current / Completed
 
@@ -32,7 +32,7 @@ This roadmap describes future work. Items listed here are not current MVP 3.16 c
 ## Near Term
 
 - 优先完成学生默认读谱流程：选谱、分析、查看当前书面小节的可读结论，再按需查看证据；专家校审保持独立，不再扩大为默认操作路径。
-- 用原始 `.musicxml` 在实体 iPhone Safari 复测文件选择、标题/谱面布局、书面小节定位；小米 Chrome 复测窄屏触控、草稿保护与 JSON 往返。设备信息和结果未记录前不宣称通过。
+- 以已确认的 iOS Safari 核心读谱项目为基础，按需补验新的未知文案、标题完整性、旋转恢复、草稿保护与 JSON 往返；不把 `b9bfc25` 实测套用于之后的提交。Android 验收延期，不阻断当前收尾，未验证项如实保留。
 - 改善当前小节多事件的阅读清晰度与无可靠结论时的原因提示，不增加乐理推断。
 - Extend the licensed repertoire validation set only after provenance and independent expectations are recorded.
 - Have a qualified music reviewer annotate ambiguous harmony in the current short excerpts; any future accuracy calculation requires a separately reviewed comparison design and independently verified coverage.

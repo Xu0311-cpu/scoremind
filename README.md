@@ -2,7 +2,7 @@
 
 ScoreMind 面向练琴或学习乐理时遇到读谱困难的人：想知道“这是什么和弦、为什么这样判断、这里该怎样理解”，可以选择 MusicXML 乐谱、运行确定性分析、按书面小节查看谱面与简短解释，再按需展开证据。机器结果是依据，不能替代完整的专业乐理判断。
 
-默认页面现在是**读谱**；独立和声标注、人工对照和校审记录集中在显式的“专家校审”入口，普通使用不需要填写人工记录。作品标题从原文件元数据单独排版，避免窄屏下被谱面画布裁切。文件选择器显示所有文件以避开 iPhone 对 `.musicxml` 的过滤问题，但应用与后端仍只接受 `.musicxml`、`.xml`。上述 3.15 改动只涉及呈现与选择体验；本轮保留旧 `analysis_version=3.11.0`、标注 JSON v1 与旧乐理算法，另增下面的独立持续音识别模块。原始扩展名仍待实体 iPhone 最终复测。
+默认页面现在是**读谱**；独立和声标注、人工对照和校审记录集中在显式的“专家校审”入口，普通使用不需要填写人工记录。作品标题从原文件元数据单独排版，避免窄屏下被谱面画布裁切。文件选择器显示所有文件以避开 iPhone 对 `.musicxml` 的过滤问题，但应用与后端仍只接受 `.musicxml`、`.xml`。上述 3.15 改动只涉及呈现与选择体验；本轮保留旧 `analysis_version=3.11.0`、标注 JSON v1 与旧乐理算法，另增下面的独立持续音识别模块。用户已确认原始扩展名在 iPhone Safari 可选并可分析；标题完整性等未单独确认项目仍待验。
 
 MVP 3.16 本地候选：默认读谱新增基于完整记谱持续音的三和弦/七和弦识别，纳入此前延续但此刻没有重新起音的音。K.157 书面第 1 小节四分音符偏移 `[2,5/2)` 识别为 C 大三和弦、C3 低音、原位，证据包含延续的 G3；相邻 `[3/2,2)` 保留全部 D4、B3、G3、C3 并返回未知，不删音强配。固定预期、实际输出和回归范围见 [持续音和弦验证](docs/SUSTAINED_HARMONY_VALIDATION.md)。
 
@@ -10,9 +10,11 @@ MVP 3.16 本地候选：默认读谱新增基于完整记谱持续音的三和�
 
 新字段 `notated_harmony` 格式 v1、模块版本 `3.16.0`，与旧 `analysis_version=3.11.0` 分开。旧 `detected_chords` 仍是起音检测，旧音符角色、罗马数字、和声功能和校审意见不自动用于新模块。默认摘要、模板解释与学习报告区分两套来源；旧结果保留在技术/专家入口。partial/unsupported、移调或来源不完整时新模块不可分析；完整集合不匹配、拼写冲突或根音多解时保留未知。首版对增三和弦和减七和弦的对称根音集合暂不选根音；这不等于完整结构和声分析。
 
-本分支依赖尚未合并的 3.15 修复 `0aaf933`；PR #10 未合并。应用与模板解释版本 `3.16.0`，独立人工标注仍为 v1，上传仍仅 `.musicxml/.xml`。3.15 的实体 iPhone Safari/小米触控验收仍待实际复测，不因本轮本机浏览器验证而标为完成。
+2026-11-06 用户在 **iPhone 17 / iOS 26.3 / Safari**、`b9bfc25` 上确认原始 `.musicxml` 选择与分析、上述 K.157 正反区间及可理解性、下一小节与谱面联动正常。本阶段聚焦 iOS Safari；**Android 延期、未验证，不作为本轮阻断**。这不代表全部真机矩阵通过；具体项目及剩余项见 [移动验证记录](docs/MOBILE_VALIDATION_3_15.md)。本次文案收尾将默认未知结果简化为“这里需要结合前后文判断，当前版本暂不能可靠确定和弦。”，技术原因保留在展开依据，不新增上下文推断，新文案尚待真机复测。
 
-MVP 3.15 records a 390px browser validation pass for score navigation, human annotation and JSON round-trip. **Physical iPhone Safari and Android Chrome touch testing remains unverified**; pointer simulation is not a substitute. No new analysis or input capability was added. See the [3.15 mobile validation record](docs/MOBILE_VALIDATION_3_15.md) for the device matrix, screenshots and remaining risks.
+本分支依赖尚未合并的 3.15 修复 `0aaf933`；PR #10 未合并。应用与模板解释版本 `3.16.0`，独立人工标注仍为 v1，上传仍仅 `.musicxml/.xml`。`b9bfc25` 已通过独立复审，本次收尾不改识别状态或置信度。
+
+The original MVP 3.15 handoff recorded 390px browser checks, not physical touch acceptance. The narrowly scoped iPhone feedback above is recorded separately; Android remains deferred and unverified. No additional analysis or input capability is introduced by this closeout.
 
 MVP 3.14 protects **unsaved independent harmony edits** in the current page. It compares each written measure's form with its saved human record: blank or unchanged forms do not trigger a warning. Switching score files (including unsupported files), Reset, and confirmed JSON replacement ask before discarding unsaved edits; cancellation keeps the current score and form. Browser-native leave/reload warnings are enabled only while unsaved edits exist. Browser prompts cannot use custom wording and may not fire reliably on mobile. Unsaved fields remain session-only and are **not** included in the v1 annotation JSON, progress counts, machine analysis, or Learning Report.
 
