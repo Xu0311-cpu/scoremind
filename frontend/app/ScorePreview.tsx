@@ -5,13 +5,15 @@ import type { OpenSheetMusicDisplay } from "opensheetmusicdisplay";
 import type { NotatedTimelineData } from "./NotatedTimeline";
 import { locateWrittenMeasure } from "./scoreMeasureNavigation";
 import { verifiedScoreStructure, type VerifiedScoreStructure } from "./scoreStructure";
+import { readScoreCredits, type ScoreCredits } from "./scoreCredits";
 
-export default function ScorePreview({ xml, timeline, selectedMeasureIndex, navigationToken, onStructureChange }: {
+export default function ScorePreview({ xml, timeline, selectedMeasureIndex, navigationToken, onStructureChange, onLocationChange }: {
   xml: string | null;
   timeline?: NotatedTimelineData | null;
   selectedMeasureIndex: number | null;
   navigationToken: number;
   onStructureChange?: (structure: VerifiedScoreStructure | null, reason: string | null) => void;
+  onLocationChange?: (located: boolean, reason: string | null) => void;
 }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const osmdRef = useRef<OpenSheetMusicDisplay | null>(null);
@@ -21,8 +23,11 @@ export default function ScorePreview({ xml, timeline, selectedMeasureIndex, navi
   const [renderRevision, setRenderRevision] = useState(0);
   const [renderError, setRenderError] = useState(false);
   const [locationMessage, setLocationMessage] = useState("乐谱尚未渲染，暂不可定位。");
+  const [scoreCredits, setScoreCredits] = useState<ScoreCredits | null>(null);
   const structureCallbackRef = useRef(onStructureChange);
   structureCallbackRef.current = onStructureChange;
+  const locationCallbackRef = useRef(onLocationChange);
+  locationCallbackRef.current = onLocationChange;
 
   function clearMarks() {
     for (const mark of marksRef.current) mark.parentNode?.removeChild(mark);
@@ -38,6 +43,13 @@ export default function ScorePreview({ xml, timeline, selectedMeasureIndex, navi
     let resizeTimer: ReturnType<typeof setTimeout> | null = null;
     setRenderError(false);
     setLocationMessage("乐谱正在渲染，暂不可定位。");
+    locationCallbackRef.current?.(false, "乐谱正在渲染，暂不可定位。");
+    try {
+      const document = new DOMParser().parseFromString(xmlToRender, "application/xml");
+      setScoreCredits(readScoreCredits(document));
+    } catch {
+      setScoreCredits(null);
+    }
     structureCallbackRef.current?.(null, null);
     container.innerHTML = "";
 
@@ -46,7 +58,7 @@ export default function ScorePreview({ xml, timeline, selectedMeasureIndex, navi
       try {
         const { OpenSheetMusicDisplay, PointF2D } = await import("opensheetmusicdisplay");
         if (cancelled) return;
-        const osmd = new OpenSheetMusicDisplay(container, { autoResize: false, drawTitle: true });
+        const osmd = new OpenSheetMusicDisplay(container, { autoResize: false, drawCredits: false });
         await osmd.load(xmlToRender);
         if (cancelled) return;
         try {
@@ -75,6 +87,7 @@ export default function ScorePreview({ xml, timeline, selectedMeasureIndex, navi
               osmdRef.current = null;
               setRenderError(true);
               setLocationMessage("谱面重排失败，无法安全定位。");
+              locationCallbackRef.current?.(false, "谱面重排失败，无法安全定位。");
             }
           }, 150);
         });
@@ -85,6 +98,7 @@ export default function ScorePreview({ xml, timeline, selectedMeasureIndex, navi
         osmdRef.current = null;
         setRenderError(true);
         setLocationMessage("乐谱渲染失败，无法定位；后端分析仍可独立运行。");
+        locationCallbackRef.current?.(false, "乐谱渲染失败，无法定位；后端分析仍可独立运行。");
         structureCallbackRef.current?.(null, "谱面未能渲染，人工标注位置无法验证。");
       }
     }
@@ -104,10 +118,14 @@ export default function ScorePreview({ xml, timeline, selectedMeasureIndex, navi
     clearMarks();
     const osmd = osmdRef.current;
     const PointF2D = pointConstructorRef.current;
-    if (!osmd || !PointF2D) return;
+    if (!osmd || !PointF2D) {
+      locationCallbackRef.current?.(false, "乐谱尚未渲染，暂不可定位。");
+      return;
+    }
     const location = locateWrittenMeasure(osmd, timeline, selectedMeasureIndex);
     if (location.status === "unavailable") {
       setLocationMessage(location.reason);
+      locationCallbackRef.current?.(false, location.reason);
       return;
     }
     try {
@@ -130,19 +148,31 @@ export default function ScorePreview({ xml, timeline, selectedMeasureIndex, navi
       }
       lastNavigationRef.current = navigationToken;
       setLocationMessage(`已定位书面第 ${selectedMeasureIndex} 小节；标框覆盖本小节的各谱表，不定位单个音符。`);
+      locationCallbackRef.current?.(true, null);
     } catch {
       clearMarks();
       setLocationMessage("谱面标记未能安全绘制，已取消高亮。请查看技术证据中的文字来源。");
+      locationCallbackRef.current?.(false, "谱面标记未能安全绘制，已取消高亮。请查看技术证据中的文字来源。");
     }
     return clearMarks;
   }, [timeline, selectedMeasureIndex, navigationToken, renderRevision]);
 
   return (
     <div className="score-preview-wrap">
+      {scoreCredits && <div className="score-credits">
+        <strong className="score-title">{scoreCredits.title || "未提供作品标题"}</strong>
+        {scoreCredits.subtitle && <span className="score-subtitle">{scoreCredits.subtitle}</span>}
+        {scoreCredits.composer && <span>{scoreCredits.composer}</span>}
+        {scoreCredits.lyricist && <span>词：{scoreCredits.lyricist}</span>}
+        {scoreCredits.details.length > 0 && <details>
+          <summary>作品来源与其他题注</summary>
+          {scoreCredits.details.map((text) => <p key={text}>{text}</p>)}
+        </details>}
+      </div>}
       {!xml && <p className="empty-state">正在读取 MusicXML 乐谱预览...</p>}
       {renderError && <div className="inline-warning">Score rendering failed, but analysis may still work. / 乐谱预览渲染失败，但分析可能仍可进行。</div>}
       <p className={locationMessage.startsWith("已定位") ? "score-location-status" : "score-location-status timeline-caution"} role="status">{locationMessage}</p>
-      <div ref={containerRef} className="score-preview" aria-label="Rendered MusicXML score preview" />
+      <div className="score-preview-viewport"><div ref={containerRef} className="score-preview" aria-label="Rendered MusicXML score preview" /></div>
     </div>
   );
 }

@@ -87,6 +87,12 @@ Important areas:
 
 OpenSheetMusicDisplay renders the uploaded MusicXML text in the browser. This preview is for visual verification only. It is not OMR and does not convert images or PDFs.
 
+### MVP 3.15 默认读谱与窄屏呈现
+
+默认入口显示上传、书面小节导航与当前小节的各起音分析事件；只有 OSMD 小节映射验证成功才关联当前谱面结论。专家表单隐藏时保持挂载，以保留页面内未保存输入；机器揭示闸门继续覆盖所有机器视图。技术证据和全曲学习路径按需展开。
+
+`scoreCredits.ts` 从原 XML DOM 读取作品标题、乐章、作者与 `credit` 题注，通过确定性回退/去重保留副标题与其他作品信息。`ScorePreview.tsx` 将它们以 React 文本展示在可横向滚动的 OSMD 谱面之外，关闭 OSMD credits；不改上传字节或来源映射。`ExplanationResult.tsx` 展示已有调性与音符角色数量的简短中文，完整模板响应与全部警告置于默认收起的原生 `details` 中；长原因代码可换行，报告仍使用原完整解释数据。纵向上传表单采用内容高度，避免桌面横向 flex 的宽度基准撑高手机表单。
+
 ### MVP 3.14 未保存标注保护
 
 `page.tsx` 持有按**书面小节索引**分开的 `AnnotationDrafts`，`HarmonicAnnotation.tsx` 只编辑当前小节。 `annotationDrafts.ts` 逐字段比较页面内草稿与当前独立人工包的已存条目，空白或改回原值不计脏；人工进度仍只读取正式包。 `annotationDiscard.ts` 统一取消换谱时恢复原文件输入；Reset、选中新文件（含不支持文件）和确认导入覆盖都在清稿前征询用户。导入写入失败不清稿。仅脏态注册 `beforeunload`，保存/删除/确认丢弃后解除；它不是自动保存，也不保证移动端总能拦截离页。未保存字段不进入 v1 JSON、机器分析、学习报告或浏览器持久草稿。应用/解释版本 `3.14.0`，确定性 `analysis_version=3.11.0` 不变。

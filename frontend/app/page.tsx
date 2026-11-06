@@ -15,6 +15,9 @@ import { readRevealMarker, requestMachineReveal } from "./harmonicReveal";
 import type { VerifiedScoreStructure } from "./scoreStructure";
 import { MAX_REVIEW_BYTES, deleteReviewRecord, parseReviewPackage, readReviewDraft, reviewScopeFromTimeline, serializeReviewPackage, upsertReviewRecord, writeReviewDraft, type ReviewRecord, type ReviewScope } from "./reviewRecords";
 import { initialMeasureIndex, writtenMeasureOptions } from "./scoreMeasureNavigation";
+import { chordEventLabel, currentMeasureReading } from "./currentMeasureReading";
+import { isSupportedScoreFile } from "./scoreFileSelection";
+import ExplanationResult from "./ExplanationResult";
 
 type KeyAnalysis = {
   tonic: string | null;
@@ -128,23 +131,7 @@ type NoteSummary = {
   unknownNctCandidate: number;
 };
 
-type AnalysisView = "student" | "technical";
-
-type InputSourceId =
-  | "musicxml"
-  | "notation"
-  | "pdf"
-  | "image"
-  | "scan"
-  | "midi_audio";
-
-type InputSourceOption = {
-  id: InputSourceId;
-  label: string;
-  status: string;
-  statusClass: "supported" | "export" | "research" | "future" | "outside";
-  message: string;
-};
+type AnalysisView = "none" | "student" | "technical";
 
 type StudentSummary = {
   keySummary: string;
@@ -180,50 +167,31 @@ type TerminologyItem = {
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ?? "http://127.0.0.1:8000";
 
-const SUPPORTED_EXTENSIONS = [".musicxml", ".xml"];
-
-const INPUT_SOURCE_OPTIONS: InputSourceOption[] = [
-  {
-    id: "musicxml",
-    label: "MusicXML / XML",
-    status: "Supported now",
-    statusClass: "supported",
-    message: "Upload `.musicxml` or `.xml` directly. This is the current reliable input path.",
-  },
+const INPUT_GUIDANCE = [
   {
     id: "notation",
-    label: "MuseScore / notation software",
-    status: "Export first",
-    statusClass: "export",
-    message: "Export your score as MusicXML/XML from MuseScore or notation software, then upload it here.",
+    label: "MuseScore / 制谱软件",
+    message: "先导出 MusicXML/XML，再上传到 ScoreMind。",
   },
   {
     id: "pdf",
-    label: "PDF score",
-    status: "Research only",
-    statusClass: "research",
-    message: "PDF input requires OMR. OMR is still research-only because recognition errors can corrupt downstream analysis.",
+    label: "PDF 乐谱",
+    message: "目前不能上传。需要额外 OMR，识别错误会影响后续分析。",
   },
   {
     id: "image",
-    label: "Image / screenshot",
-    status: "Research only",
-    statusClass: "research",
-    message: "Image input also requires OMR and correction workflow. Current runtime does not process image files.",
+    label: "图片 / 截图",
+    message: "目前不能上传；未来需要 OMR 与人工纠错流程。",
   },
   {
     id: "scan",
-    label: "Scanned paper score",
-    status: "Future work",
-    statusClass: "future",
-    message: "Scanned paper scores need OMR plus correction before analysis. This is not supported in the current runtime.",
+    label: "纸谱扫描件",
+    message: "目前不能上传，仍属未来输入扩展研究。",
   },
   {
     id: "midi_audio",
-    label: "MIDI / audio",
-    status: "Outside current scope",
-    statusClass: "outside",
-    message: "ScoreMind currently analyzes symbolic notation data, not performance or audio input.",
+    label: "MIDI / 音频",
+    message: "目前只分析符号化乐谱，不分析演奏或音频。",
   },
 ];
 
@@ -282,6 +250,7 @@ const TERMINOLOGY_GUIDE: TerminologyItem[] = [
 
 export default function Home() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const analysisPanelRef = useRef<HTMLElement | null>(null);
   const fileGenerationRef = useRef(0);
   const analysisGenerationRef = useRef(0);
   const sessionRevealedRef = useRef(new Set<string>());
@@ -299,8 +268,8 @@ export default function Home() {
   const [copyMessage, setCopyMessage] = useState<string | null>(null);
   const [noteRoleFilter, setNoteRoleFilter] = useState<NoteRoleFilter>("all");
   const [noteContextFilter, setNoteContextFilter] = useState<NoteContextFilter>("all");
-  const [analysisView, setAnalysisView] = useState<AnalysisView>("student");
-  const [inputSource, setInputSource] = useState<InputSourceId>("musicxml");
+  const [analysisView, setAnalysisView] = useState<AnalysisView>("none");
+  const [workspaceMode, setWorkspaceMode] = useState<"reading" | "expert">("reading");
   const [error, setError] = useState<string | null>(null);
   const [reviewScope, setReviewScope] = useState<ReviewScope | null>(null);
   const [reviewRecords, setReviewRecords] = useState<ReviewRecord[]>([]);
@@ -308,6 +277,7 @@ export default function Home() {
   const [pendingReviewImport, setPendingReviewImport] = useState<ReviewRecord[] | null>(null);
   const [fileFingerprint, setFileFingerprint] = useState<string | null>(null);
   const [scoreStructure, setScoreStructure] = useState<VerifiedScoreStructure | null>(null);
+  const [previewLocation, setPreviewLocation] = useState<{ located: boolean; reason: string | null }>({ located: false, reason: "乐谱尚未定位。" });
   const [structureReason, setStructureReason] = useState<string | null>(null);
   const [fingerprintFailed, setFingerprintFailed] = useState(false);
   const [machineRevealed, setMachineRevealed] = useState(false);
@@ -382,8 +352,8 @@ export default function Home() {
     return buildStudentSummary(analysis);
   }, [analysis]);
 
-  const selectedInputSource = INPUT_SOURCE_OPTIONS.find((option) => option.id === inputSource) ?? INPUT_SOURCE_OPTIONS[0];
   const measureOptions = useMemo(() => writtenMeasureOptions(analysis?.notated_timeline), [analysis]);
+  const selectedReading = useMemo(() => currentMeasureReading(analysis?.measures ?? [], selectedMeasureIndex), [analysis, selectedMeasureIndex]);
   const harmonyScope = useMemo<HarmonyScope | null>(() => fileFingerprint && scoreStructure
     ? { file_sha256: fileFingerprint, measure_durations_qn: scoreStructure.measure_durations_qn }
     : null, [fileFingerprint, scoreStructure]);
@@ -416,13 +386,20 @@ export default function Home() {
   }, [harmonyScope]);
 
   function selectWrittenMeasure(index: number) {
+    setPreviewLocation({ located: false, reason: "正在定位书面小节。" });
     setSelectedMeasureIndex(index);
     setNavigationToken((token) => token + 1);
   }
 
   function openReviewForMeasure(index: number) {
     selectWrittenMeasure(index);
+    setWorkspaceMode("expert");
     window.requestAnimationFrame(() => document.getElementById("expert-review")?.scrollIntoView({ behavior: "smooth", block: "start" }));
+  }
+
+  function openTechnicalEvidence() {
+    setAnalysisView("technical");
+    window.requestAnimationFrame(() => analysisPanelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
   }
 
   function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
@@ -433,7 +410,7 @@ export default function Home() {
     }
     if (!guardFileSelection(event.currentTarget, file, unsavedAnnotationIndices.length > 0,
       () => window.confirm("有尚未保存的人工和声编辑。继续将放弃这些编辑；正式标注记录不受影响。确定继续吗？"))) return;
-    if (selectedFile && !isSupportedFile(selectedFile.name)) {
+    if (selectedFile && !isSupportedScoreFile(selectedFile.name)) {
       resetStateUnchecked();
       setError("This file type is not supported. Please upload a .musicxml or .xml file. / 不支持此文件类型，请上传 .musicxml 或 .xml 文件。");
       return;
@@ -453,7 +430,8 @@ export default function Home() {
     setCopyMessage(null);
     setNoteRoleFilter("all");
     setNoteContextFilter("all");
-    setAnalysisView("student");
+    setAnalysisView("none");
+    setWorkspaceMode("reading");
     setError(null);
     setReviewScope(null);
     setReviewRecords([]);
@@ -462,6 +440,7 @@ export default function Home() {
     setFileFingerprint(null);
     setFingerprintFailed(false);
     setScoreStructure(null);
+    setPreviewLocation({ located: false, reason: "乐谱尚未定位。" });
     setStructureReason(null);
     setMachineRevealed(false);
     setBlindEligible(false);
@@ -527,12 +506,14 @@ export default function Home() {
     setAnalysis(null);
     setAnalysisFingerprint(null);
     setSelectedMeasureIndex(null);
+    setPreviewLocation({ located: false, reason: "正在定位书面小节。" });
     setExplanation(null);
     setMarkdownReport("");
     setCopyMessage(null);
     setNoteRoleFilter("all");
     setNoteContextFilter("all");
-    setAnalysisView("student");
+    setAnalysisView("none");
+    setWorkspaceMode("reading");
     setReviewScope(null);
     setReviewRecords([]);
     setReviewMessage(null);
@@ -626,7 +607,8 @@ export default function Home() {
     setCopyMessage(null);
     setNoteRoleFilter("all");
     setNoteContextFilter("all");
-    setAnalysisView("student");
+    setAnalysisView("none");
+    setWorkspaceMode("reading");
     setSelectedMeasureIndex(null);
     setLoadingAnalysis(false);
     setError(null);
@@ -637,6 +619,7 @@ export default function Home() {
     setFileFingerprint(null);
     setFingerprintFailed(false);
     setScoreStructure(null);
+    setPreviewLocation({ located: false, reason: "乐谱尚未定位。" });
     setStructureReason(null);
     setMachineRevealed(false);
     setBlindEligible(false);
@@ -857,7 +840,7 @@ export default function Home() {
       <section className="workspace">
         <header className="page-header">
           <div>
-            <p className="eyebrow">MVP 3.14</p>
+            <p className="eyebrow">MVP 3.15</p>
             <h1>ScoreMind</h1>
             <p className="product-subtitle">AI Music Score Understanding</p>
           </div>
@@ -867,90 +850,72 @@ export default function Home() {
         <section className="panel">
           <div className="panel-header">
             <div>
-              <h2>Score Input Workspace</h2>
-              <p className="panel-note">
-                ScoreMind currently analyzes structured MusicXML. Other score sources are shown to clarify the roadmap, not as runtime features.
-              </p>
+              <h2>选择乐谱</h2>
+              <p className="panel-note">上传 MusicXML，查看谱面，再按书面小节阅读已有分析。仅支持 .musicxml 和 .xml。</p>
             </div>
           </div>
-
-          <div className="input-workspace">
-            <div className="input-source-list" aria-label="Score source selector">
-              {INPUT_SOURCE_OPTIONS.map((option) => (
-                <button
-                  key={option.id}
-                  type="button"
-                  className={`input-source-option ${inputSource === option.id ? "active" : ""}`}
-                  onClick={() => setInputSource(option.id)}
-                >
-                  <span>{option.label}</span>
-                  <strong className={`source-status ${option.statusClass}`}>{option.status}</strong>
-                </button>
-              ))}
+          <form className="upload-row" onSubmit={handleAnalyze}>
+            <label className="file-control">
+              <span>MusicXML / XML</span>
+              <input ref={fileInputRef} type="file" onChange={handleFileChange} aria-describedby="file-type-note" />
+              {file && <span className="selected-file-name">已选择：{file.name}</span>}
+            </label>
+            <button type="submit" disabled={!file || loadingAnalysis}>{loadingAnalysis ? "分析中..." : "分析乐谱"}</button>
+            <button type="button" className="secondary-button" onClick={resetState}>清空</button>
+          </form>
+          <p id="file-type-note" className="panel-note">文件选择器显示所有文件，方便 iPhone 选取 .musicxml；不支持的扩展名仍会被拒绝。</p>
+          <details className="secondary-details">
+            <summary>没有 MusicXML？查看样例与其他来源的导入说明</summary>
+            <div className="sample-links-panel">
+              <a href="/samples/c_major_progression.musicxml" download>C 大调进行样例</a>
+              <a href="/samples/carried_context_notes.musicxml" download>沿用和声上下文样例</a>
+              <ul>{INPUT_GUIDANCE.map((option) => (
+                <li key={option.id}><strong>{option.label}：</strong>{option.message}</li>
+              ))}</ul>
             </div>
+          </details>
 
-            <div className="input-guidance-card">
-              <div className="source-heading">
-                <div>
-                  <h3>{selectedInputSource.label}</h3>
-                  <p>{selectedInputSource.message}</p>
-                </div>
-                <span className={`source-status large ${selectedInputSource.statusClass}`}>
-                  {selectedInputSource.status}
-                </span>
-              </div>
-
-              {selectedInputSource.id === "musicxml" ? (
-                <>
-                  <form className="upload-row" onSubmit={handleAnalyze}>
-                    <label className="file-control">
-                      <span>MusicXML / XML</span>
-                      <input ref={fileInputRef} type="file" accept=".musicxml,.xml" onChange={handleFileChange} />
-                    </label>
-                    <button type="submit" disabled={!file || loadingAnalysis}>
-                      {loadingAnalysis ? "Analyzing..." : "Analyze"}
-                    </button>
-                    <button type="button" className="secondary-button" onClick={resetState}>
-                      Reset
-                    </button>
-                  </form>
-
-                  <div className="sample-links-panel">
-                    <h3>Try sample files</h3>
-                    <p>No MusicXML file yet? Download a sample score and upload it to try the demo.</p>
-                    <ul>
-                      <li>
-                        <a href="/samples/c_major_progression.musicxml" download>
-                          C major progression sample
-                        </a>
-                        : demonstrates key, Roman numerals, harmonic functions, and Measure Walkthrough.
-                      </li>
-                      <li>
-                        <a href="/samples/carried_context_notes.musicxml" download>
-                          Carried context note-level sample
-                        </a>
-                        : demonstrates note-level chord tone labels and carried previous chord context.
-                      </li>
-                    </ul>
-                  </div>
-                </>
-              ) : (
-                <div className="unsupported-source-note">
-                  <p>
-                    This source is guidance-only in MVP 3.14. The runtime upload control still accepts only
-                    {" "}.musicxml and .xml files after you export or convert externally.
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
+          {error && <div className="error-box" role="alert">{error}</div>}
 
           {file && (
             <>
+              <div className="view-toggle" aria-label="工作模式">
+                <button type="button" className={workspaceMode === "reading" ? "active" : ""} onClick={() => setWorkspaceMode("reading")}>读谱</button>
+                <button type="button" className={workspaceMode === "expert" ? "active" : ""} onClick={() => setWorkspaceMode("expert")}>专家校审</button>
+              </div>
               {machineRevealed && analysis && <WrittenMeasureNavigator options={measureOptions} selected={selectedMeasureIndex} onSelect={selectWrittenMeasure} label="乐谱预览书面小节导航" />}
+              {workspaceMode === "reading" && machineRevealed && analysis && <section className="current-measure-reading" aria-label="当前书面小节分析">
+                <div className="panel-header">
+                  <div>
+                    <h3>当前书面小节 {selectedMeasureIndex ?? "未定位"}</h3>
+                    <p className="panel-note">和弦结果对应各自起音位置，并非整小节唯一和声。</p>
+                  </div>
+                  <button type="button" className="secondary-button" onClick={openTechnicalEvidence}>查看依据</button>
+                </div>
+                {!previewLocation.located ? <p className="timeline-caution">{previewLocation.reason ?? "谱面尚未可靠定位，暂不关联当前小节结论。"}</p> : selectedReading.reason ? <p className="timeline-caution">{selectedReading.reason}</p> : selectedReading.measure && <>
+                  <p className="reading-measure-label">谱面显示编号：{selectedReading.measure.measure_number}</p>
+                  {analysis.notated_timeline?.status !== "complete" && <p className="timeline-caution">
+                    {analysis.notated_timeline?.status === "partial" ? "记谱时间轴仅部分可靠" : "记谱时间轴未提供可靠完整结果"}；以下和弦仍来自原有同起点检测，来源核对请见技术证据。
+                  </p>}
+                  {selectedReading.measure.detected_chords.length ? <ol className="reading-events">
+                    {selectedReading.measure.detected_chords.map((chord, index) => <li key={`${chord.beat}-${index}`}>
+                      <strong>{chord.beat === null ? "位置未提供" : `第 ${chord.beat} 拍`} · {chordEventLabel(chord)}</strong>
+                      <span>{chord.roman_numeral ? `级数 ${chord.roman_numeral}` : "级数暂不确定"}；{chord.harmonic_function !== "unknown" ? `功能 ${formatHarmonicFunctionForStudent(chord.harmonic_function)}` : "功能暂不确定"}</span>
+                      <small>依据：{chord.pitches.join("、") || "无音高来源"}</small>
+                    </li>)}
+                  </ol> : <p className="timeline-caution">本小节没有可展示的同起点和弦结论；不能据此推断整小节没有和声。</p>}
+                </>}
+                <button type="button" onClick={handleGenerateExplanation} disabled={loadingExplanation}>{loadingExplanation ? "生成中..." : "生成全曲模板解释"}</button>
+                {explanation && studentSummary && <ExplanationResult result={explanation} keyText={studentSummary.keySummary}
+                  noteText={`音符归属分析中，${noteRoleCounts.chordTone} 个音属于所选和声，${noteRoleCounts.nonChordTone} 个是非和弦音候选，${noteRoleCounts.unknown} 个暂不判断。候选提示需要结合谱面核对。`} />}
+                <p className="reading-limitation">结果由确定性后端给出；持续音集合只是记谱观察，不等于新和弦结论。</p>
+              </section>}
               <ScorePreview key={fileRevision} xml={musicXmlText} timeline={machineRevealed ? analysis?.notated_timeline : null}
                 selectedMeasureIndex={selectedMeasureIndex} navigationToken={navigationToken}
+                onLocationChange={(located, reason) => setPreviewLocation({ located, reason })}
                 onStructureChange={(structure, reason) => { setScoreStructure(structure); setStructureReason(reason); if (structure) setSelectedMeasureIndex((current) => current ?? 1); }} />
+              <div hidden={workspaceMode !== "expert"} className="expert-workspace">
+              <p className="panel-note">人工意见与机器分析分开保存，不会改变学习报告或算法置信度。</p>
               <HarmonicAnnotation key={`${fileRevision}:${harmonyPackage?.annotation_set_id ?? "loading"}:${harmonyImportRevision}`} structure={scoreStructure}
                 value={harmonyPackage?.file_sha256 === fileFingerprint ? harmonyPackage : null}
                 selectedIndex={selectedMeasureIndex} onSelectIndex={selectWrittenMeasure}
@@ -967,63 +932,13 @@ export default function Home() {
               {canMountHarmonicComparison(machineRevealed, !!analysis, fileFingerprint, analysisFingerprint) && harmonyComparison &&
                 <HarmonicComparison result={harmonyComparison} reviewAvailable={!!reviewScope} onOpenReview={openReviewForMeasure} />}
               {machineRevealed && analysis && <div id="expert-review"><ExpertReview key={`${reviewScope?.file_sha256 ?? "unavailable"}:${selectedMeasureIndex}`} scope={reviewScope} selectedMeasureIndex={selectedMeasureIndex} records={reviewRecords} onSelectMeasureIndex={selectWrittenMeasure} onSave={saveReview} onDelete={removeReview} onImport={importReviews} onExport={exportReviews} pendingImportCount={pendingReviewImport?.length ?? null} onConfirmImport={confirmReviewImport} onCancelImport={() => setPendingReviewImport(null)} message={reviewMessage} /></div>}
+              </div>
             </>
           )}
         </section>
 
-        <section className="info-grid" aria-label="Prototype testing guidance">
-          <div className="info-panel">
-            <h2>About this demo</h2>
-            <ul>
-              <li>This is a deterministic MusicXML score understanding demo for music students.</li>
-              <li>It helps students read chord, key, Roman numeral, harmonic function, note-level harmony relationships, and conservative non-chord tone candidate hints.</li>
-              <li>It does not support PDF/image/OMR or real LLM reasoning yet.</li>
-            </ul>
-          </div>
-          <div className="info-panel">
-            <h2>Current Scope</h2>
-            <ul>
-              <li>Supports MusicXML/XML only.</li>
-              <li>Does not support PDF/image/OMR.</li>
-              <li>Renders MusicXML score preview for visual verification only.</li>
-              <li>Does not use real LLM/OpenAI.</li>
-              <li>Analysis is deterministic and backend-generated.</li>
-              <li>Includes conservative note-level chord-tone labeling with carried context.</li>
-              <li>Adds conservative non-chord tone candidate hints (passing/neighbor) for student learning only.</li>
-              <li>Note filters and summaries are frontend-only usability tools.</li>
-              <li>Student View explains the same deterministic result in plain Chinese.</li>
-              <li>Process Explanation turns existing analysis output into a step-by-step reading path.</li>
-              <li>Measure Walkthrough explains each measure from existing deterministic results.</li>
-              <li>Terminology Guide gives static learning hints without adding new analysis.</li>
-              <li>The main workflow is deterministic MusicXML analysis and learning-report export.</li>
-            </ul>
-          </div>
-          <div className="info-panel">
-            <h2>Demo Flow</h2>
-            <ul>
-              <li>Upload a .musicxml or .xml file.</li>
-              <li>Use backend/tests/fixtures/carried_context_notes.musicxml as a sample if available.</li>
-              <li>Click Analyze.</li>
-              <li>Read Student Analysis first, then open Technical Evidence if you want details.</li>
-              <li>Click Generate Explanation.</li>
-              <li>Generate the Learning Report to export the current deterministic result.</li>
-            </ul>
-          </div>
-          <div className="info-panel">
-            <h2>Validation Dataset</h2>
-            <ul>
-              <li>Use backend/tests/fixtures/c_major_progression.musicxml for the basic Roman numeral workflow.</li>
-              <li>Use backend/tests/fixtures/carried_context_notes.musicxml for the note-level carried context workflow.</li>
-              <li>Short CC0 repertoire excerpts support structural validation; complex harmonic judgments still need independent expert review.</li>
-              <li>Use docs/VALIDATION_REPORT_TEMPLATE.md to record repeatable accuracy reviews.</li>
-            </ul>
-          </div>
-        </section>
-
-        {error && <div className="error-box">{error}</div>}
-
         {machineRevealed && analysis && (
-          <section className="panel">
+          <section className="panel" ref={analysisPanelRef}>
             <div className="panel-header">
               <div>
                 <h2>Student Analysis / 学生视角分析</h2>
@@ -1031,9 +946,6 @@ export default function Home() {
                   A student-facing reading flow generated only from deterministic backend analysis.
                 </p>
               </div>
-              <button type="button" onClick={handleGenerateExplanation} disabled={loadingExplanation}>
-                {loadingExplanation ? "Generating..." : "Generate Explanation"}
-              </button>
             </div>
 
             <dl className="summary-grid">
@@ -1063,20 +975,20 @@ export default function Home() {
               </div>
             </dl>
 
-            <div className="view-toggle" aria-label="Student analysis view selector">
+            <div className="view-toggle" aria-label="补充分析视图">
               <button
                 type="button"
                 className={analysisView === "student" ? "active" : ""}
-                onClick={() => setAnalysisView("student")}
+                onClick={() => setAnalysisView(analysisView === "student" ? "none" : "student")}
               >
-                Student View
+                {analysisView === "student" ? "收起全曲学习路径" : "展开全曲学习路径"}
               </button>
               <button
                 type="button"
                 className={analysisView === "technical" ? "active" : ""}
-                onClick={() => setAnalysisView("technical")}
+                onClick={() => setAnalysisView(analysisView === "technical" ? "none" : "technical")}
               >
-                Technical Evidence / 技术证据
+                {analysisView === "technical" ? "收起技术证据" : "技术证据 / 查看依据"}
               </button>
             </div>
 
@@ -1231,7 +1143,7 @@ export default function Home() {
 
                 <h3>Technical Summary</h3>
                 <NotatedTimeline timeline={analysis.notated_timeline} selectedMeasureIndex={selectedMeasureIndex} onSelectMeasureIndex={selectWrittenMeasure} />
-                <p className="panel-note">人工校审记录与上述机器证据分离。<a href="#expert-review">查看或编辑当前书面小节的校审记录</a>。</p>
+                <p className="panel-note">人工意见与机器证据分开保存。<button type="button" className="text-button" onClick={() => setWorkspaceMode("expert")}>进入专家校审</button></p>
                 <dl className="summary-grid compact-grid">
                   <div>
                     <dt>File</dt>
@@ -1454,37 +1366,6 @@ export default function Home() {
         )}
 
         {machineRevealed && analysis && (
-          <>
-            {explanation && (
-              <section className="panel">
-                <h2>Template Explanation</h2>
-                <dl className="summary-grid compact-grid">
-                  <div>
-                    <dt>Explanation Version</dt>
-                    <dd>{explanation.explanation_version}</dd>
-                  </div>
-                </dl>
-                <p className="summary-text">{explanation.summary}</p>
-                <div className="section-list">
-                  {explanation.sections.map((section) => (
-                    <section key={section.title} className="explanation-section">
-                      <h3>{section.title}</h3>
-                      <p>{section.text}</p>
-                    </section>
-                  ))}
-                </div>
-                <h3>Explanation Warnings</h3>
-                <ul className="warning-list">
-                  {explanation.warnings.map((warning) => (
-                    <li key={warning}>{warning}</li>
-                  ))}
-                </ul>
-              </section>
-            )}
-          </>
-        )}
-
-        {machineRevealed && analysis && (
           <section className="panel">
             <div className="panel-header">
               <div>
@@ -1520,6 +1401,11 @@ export default function Home() {
             )}
           </section>
         )}
+        <details className="secondary-details research-details">
+          <summary>研发范围与验证资料</summary>
+          <p>运行时仅接受 MusicXML/XML；PDF、图片、扫描谱与 OMR 尚不可用。解释为模板文本，不调用 LLM。</p>
+          <p>验证方法与演示流程见项目文档 docs/VALIDATION.md、docs/DEMO_FLOW.md。复杂和声不能仅凭当前演示结果判定准确率。</p>
+        </details>
       </section>
     </main>
   );
@@ -1563,11 +1449,6 @@ function NoteSummaryGrid({ summary }: { summary: NoteSummary }) {
 async function fingerprintFile(file: File): Promise<string> {
   const digest = await crypto.subtle.digest("SHA-256", await file.arrayBuffer());
   return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
-}
-
-function isSupportedFile(fileName: string) {
-  const lowerName = fileName.toLowerCase();
-  return SUPPORTED_EXTENSIONS.some((extension) => lowerName.endsWith(extension));
 }
 
 async function getApiErrorMessage(response: Response, fallback: string) {
