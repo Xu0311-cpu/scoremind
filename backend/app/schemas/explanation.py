@@ -15,6 +15,7 @@ class ExplanationSection(BaseModel):
 
 
 class ExplanationResponse(BaseModel):
+    notated_harmony_version: str | None = Field(default=None, description="Independent sustained-harmony analyzer version, if present in the input.")
     analysis_version: str = Field(description="Version of the deterministic analysis input.")
     explanation_version: str = Field(description="Version of the explanation layer.")
     language: str = Field(description="Explanation language.")

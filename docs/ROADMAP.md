@@ -1,10 +1,13 @@
 # Roadmap
 
-This roadmap describes future work. Items listed here are not current MVP 3.15 capabilities unless explicitly implemented elsewhere.
+This roadmap describes future work. Items listed here are not current MVP 3.16 capabilities unless explicitly implemented elsewhere.
 
 ## Validation In Progress
 
-- MVP 3.15 候选：390px Edge 指针环境完成部分移动可用性矩阵与 JSON 回导；用户后来在实体 iPhone 发现 `.musicxml` 文件置灰和标题裁切，本地已修复候选但原机复测未完成。小米 Chrome、浏览器取消换谱也仍待验。**真实手机触控验收尚未通过，不计入已完成里程碑。** 无新乐理或上传格式能力；详见 [`MOBILE_VALIDATION_3_15.md`](MOBILE_VALIDATION_3_15.md)。
+- MVP 3.16 合并验收：完整记谱持续音集合的独立和弦识别 v1，默认读谱/解释/报告按来源展示；K.157 两个指定区间的预期在实现前固定。`b9bfc25` 已通过独立复审，`2bbcd71` 远端 CI 成功；依赖的 3.15 修复已普通合并为 `bbca84d`。本次仅补用户验收记录，待新提交 CI 后按明确授权合并 PR #11，不宣称总体准确率。见 [`SUSTAINED_HARMONY_VALIDATION.md`](SUSTAINED_HARMONY_VALIDATION.md)。
+  复审加固已本地验证：来源边界扫描与请求内分数缓存、解释节选范围/省略数量提示；复杂长谱、响应体积和多用户并发仍需后续验证，不扩大本轮乐理范围。
+
+- 移动验收本阶段聚焦 **iOS Safari**：2026-11-06 用户在 iPhone 17 / iOS 26.3 / Safari、`b9bfc25` 上确认原始 `.musicxml` 选择及分析、K.157 正反区间与可理解性、下一小节谱面联动；同日文案收尾后追加确认标题首尾完整、横竖屏切换与新未知文案正常。JSON 往返及其余未测矩阵仍待验，不宣称全部通过。**Android 延期、未验证，不作为本轮阻断。** 无新乐理或上传格式能力；详见 [`MOBILE_VALIDATION_3_15.md`](MOBILE_VALIDATION_3_15.md)。
 
 ## Current / Completed
 
@@ -29,7 +32,7 @@ This roadmap describes future work. Items listed here are not current MVP 3.15 c
 ## Near Term
 
 - 优先完成学生默认读谱流程：选谱、分析、查看当前书面小节的可读结论，再按需查看证据；专家校审保持独立，不再扩大为默认操作路径。
-- 用原始 `.musicxml` 在实体 iPhone Safari 复测文件选择、标题/谱面布局、书面小节定位；小米 Chrome 复测窄屏触控、草稿保护与 JSON 往返。设备信息和结果未记录前不宣称通过。
+- 用户同日追加确认标题完整、横竖屏切换和新未知文案正常；按需补验任意缩放、草稿保护与 JSON 往返，不把指定项目扩大为完整矩阵。Android 验收延期，不阻断当前收尾，未验证项如实保留。
 - 改善当前小节多事件的阅读清晰度与无可靠结论时的原因提示，不增加乐理推断。
 - Extend the licensed repertoire validation set only after provenance and independent expectations are recorded.
 - Have a qualified music reviewer annotate ambiguous harmony in the current short excerpts; any future accuracy calculation requires a separately reviewed comparison design and independently verified coverage.
@@ -39,7 +42,7 @@ This roadmap describes future work. Items listed here are not current MVP 3.15 c
 ## Mid Term
 
 - Strengthen note-level analysis while remaining conservative.
-- Evaluate future use of the notated timeline in harmony analysis; existing harmony still uses onset sets and within-measure carried context.
+- 在独立验证后扩大持续音识别适用范围：对称根音集合、可靠的非和弦音处理与 partial 时间轴的局部可用性均属后续工作；旧和声/音符路径继续使用起音集合及小节内前序上下文。
 - Extend explicit support for cross-staff ties, asymmetric part grids, grace timing, concert-pitch conversion, and performance/repeat semantics only after separate validation.
 - Expand supported chord and Roman numeral cases.
 - Add more robust confidence and warning signals.
@@ -56,4 +59,4 @@ This roadmap describes future work. Items listed here are not current MVP 3.15 c
 
 ## Current Boundary
 
-The current score input is MusicXML/XML only. MVP 3.15 documents narrow-screen validation, not new score input or analysis. Conservative non-chord tone candidate hints remain learning aids; the runtime app still does not perform OMR, PDF/image upload, MIDI/audio analysis, local modulation, full classical non-chord tone classification, full sustained harmony inference, melody analysis, voice-leading analysis, or jazz/modern harmony analysis. Time-slice pitch observations are not harmony classifications.
+The current score input is MusicXML/XML only. MVP 3.16 adds strict chord matching of complete sustained written-pitch sets, not full structural or phrase-level harmony inference. Legacy note roles and Roman/function labels remain independent. Conservative NCT hints remain learning aids; runtime OMR, PDF/image upload, MIDI/audio analysis, modulation, full NCT classification, melody/voice-leading and jazz analysis remain unsupported. Raw time-slice observations are not themselves harmony classifications.

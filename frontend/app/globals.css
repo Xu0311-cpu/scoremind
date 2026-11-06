@@ -394,6 +394,13 @@ h3 {
 .reading-events li { padding-left: 2px; overflow-wrap: anywhere; }
 .reading-events strong, .reading-events span, .reading-events small { display: block; line-height: 1.45; }
 .reading-events small { color: var(--muted); }
+.harmony-interval { padding: 10px 0; border-bottom: 1px solid var(--line); }
+.harmony-interval p { margin: 5px 0; line-height: 1.5; }
+.harmony-interval.unknown > p { color: #785816; }
+.harmony-interval.silent { color: var(--muted); }
+.harmony-source-list { padding-left: 18px; overflow-wrap: anywhere; }
+.harmony-source-list > li { margin: 8px 0; font-size: 13px; }
+.harmony-source-list span { display: block; }
 .explanation-result { margin-top: 14px; min-width: 0; max-width: 100%; overflow-wrap: anywhere; line-height: 1.55; }
 .explanation-result h4 { margin: 0 0 6px; }
 .explanation-result p { margin: 8px 0; }

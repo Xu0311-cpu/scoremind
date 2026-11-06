@@ -34,6 +34,24 @@ The backend does not accept PDFs or images in the current MVP.
 
 ## Analysis Pipeline
 
+### MVP 3.16 独立记谱持续音和弦
+
+路由只组装 `timeline = build_notated_timeline(...)` 后调用 `analyze_notated_harmony(timeline)`。新契约位于 `schemas/notated_harmony.py`：`notated_harmony` 可选/null 表示未计算，格式 `schema_version=1`，模块 `analyzer_version=3.16.0`；旧 `analysis_version=3.11.0` 继续表示旧起音检测及其标签，旧 ExpertReview 键不升级。`available` 的空/静默结果与 `unavailable` 的拒绝分析不同。
+
+新模块用 Fraction 核对书面小节累计网格、原片段与持续事件的完整来源链、半开时间片分区和真实活动集合。要求时间轴 complete 且无诊断，part/staff/voice/instrument 来源明确、安全 tie、完整引用和记谱音高；partial/unsupported、移调或不完整来源整份拒绝新分析，保留旧路径。来源不完整时不猜声部。
+
+3.16 复审加固后，每个请求只解析一次各不同的规范分数字符串；将持续事件、原始片段和小节的起止边界分别排序扫描。在同一时间先结束后起音，独立重建活动集合，与时间片声称的 ID、静默标记逐项比较，并拒绝片内未切开的来源/小节边界。使用来源到事件的索引提取当前片段，不再逐片扫描全谱或完整 tie 链。缓存只在本次调用内存在，不跨请求保留乐谱信息。排序和扫描成本之外仍需处理实际活动来源及返回证据量，不能宣称所有谱例的总耗时严格线性。
+
+所有活动记谱音（包含持续音）一起匹配，不过滤额外音、不把不重叠音拼成和弦。先枚举旧基础音级模式的全部根音候选，多解即未知（首版包括增三/减七）；唯一候选再用 music21 音高/音程严格检查三度拼写，用其 Chord 检查最低音与转位。首版接受大/小/减三、属七/大七/小七/半减七/小大七。同音或八度重复保留独立来源；异名拼写冲突时不选择低音拼写。每个原时间片保留单独结果，不压缩越过静默、未知、重奏或转位改变。
+
+每个区间带全曲与小节内精确边界、书面索引、识别状态、根音/性质/低音/转位、模式、候选根音、原因码，以及逐持续事件的当前片段引用和完整来源链。它没有罗马数字、和声功能、音符角色或置信度继承；原 `detected_chords`、`harmonic_context`、NCT 与旧校审不读取新结果。
+
+`SustainedHarmonyReading.tsx` 在既有全页面揭示闸门之后、OSMD 定位可靠时作为默认读谱结果。`notatedHarmony.ts` 仅翻译新结构化字段与计数，不补理论；全曲摘要和报告标明模块来源，旧结果退居明确标识的技术/专家区域。模板解释也将新持续音段落与旧调性/起音/音符标签分栏标识；旧 JSON 无新字段仍用原解释逻辑。
+
+默认读谱的 `unknown` 使用统一温和句子，展开依据仍显示原始原因码、中文原因和不自动排除音/补推上下文的限制。该呈现不意味着前端开始推断前后文，也不更改 API 状态或置信度；报告继续使用原技术说明 helper，不受此默认文案影响。
+
+模板解释的全曲计数覆盖全部时间片，逐区间文字上限仍为 8；超过时在响应 summary 和独立段落前明确写出 `前 8/总数`、书面小节范围和未展开数，避免把节选当成整曲逐片解释。少于或等于 8 片时标明全部展示，空或不可用结果保持原保守说明。读谱逐小节和学习报告仍保留完整结构化结果。
+
 ### MVP 3.6 独立记谱时间轴
 
 `parse_musicxml_bytes` 保持 `music21` 导入路径，同时调用 `timeline_normalizer.py` 从原始 XML 规范化时间和身份。`notated_timeline.py` 负责延音线合并及时间片；路由只调用并组装 `notated_timeline`。类型位于 `schemas/timeline.py`，前端视图位于 `NotatedTimeline.tsx`。
@@ -133,14 +151,7 @@ MVP 3.13 的 `annotationProgress.ts` 是独立人工标注包的只读投影：�
 
 ## Student View vs Technical Evidence
 
-Student Analysis is the default user-facing path. It includes:
-
-- Student Summary
-- Process Explanation
-- Measure Walkthrough
-- Terminology Guide
-- learning hints
-- limitations
+MVP 3.16 默认读谱以当前书面小节的 `notated_harmony` 区间、简短中文及可展开来源为主。全曲概况也只统计该独立模块的区间状态。旧 Student Summary、Process Explanation、Measure Walkthrough、Terminology Guide 和旧音符学习提示仍可主动展开，但明确标为旧起音路径，不解释新持续音和弦。
 
 Technical Evidence is for inspection and validation. It includes:
 

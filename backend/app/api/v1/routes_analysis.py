@@ -10,6 +10,7 @@ from app.music.note_analyzer import (
 )
 from app.music.parser import MusicXMLParseError, parse_musicxml_bytes
 from app.music.notated_timeline import build_notated_timeline
+from app.music.notated_harmony import analyze_notated_harmony
 from app.music.roman_numeral_analyzer import RomanNumeralAnalysis, analyze_roman_numeral
 from app.schemas.analysis import (
     AnalyzedNoteEvent,
@@ -82,20 +83,20 @@ def _build_measure_harmonic_context(detected_chords: list[DetectedChord]) -> Mea
     )
 
 MVP_WARNINGS = [
-    "The notated-duration timeline and written-pitch observations are independent evidence, not harmonic conclusions; legacy harmony and NCT paths do not consume them.",
-    "MVP 3.15 detects chords only from simultaneous pitch sets at identical offsets.",
+    "Raw timeline observations remain evidence; notated_harmony is a separate versioned recognizer. Legacy harmony and NCT paths do not consume its results.",
+    "Legacy detected_chords (analysis_version 3.11.0) detects only identical-onset pitch sets and may omit sustained notes.",
     "Enharmonic spelling is not key-aware.",
     "Inversion is estimated from the lowest detected pitch.",
     "Roman numeral analysis is based only on the detected global key.",
     "No local modulation or secondary dominant analysis is performed.",
     "Harmonic function labels are basic MVP classifications.",
-    "MVP 3.15 note-level analysis prefers same-offset harmony, then may use carried previous chord context within the same measure.",
+    "Legacy note-level analysis prefers same-offset harmony, then may use carried previous chord context within the same measure; it does not use notated_harmony.",
     "Carried harmony context is a conservative MVP approximation.",
     "It does not perform full sustained harmony, phrase-level harmony, or voice-leading analysis.",
     "A non_chord_tone role means the note is not part of the selected chord context; it is not full classical non-chord tone classification.",
     "Non-chord tone candidate labels are conservative learning hints, not definitive music-theory conclusions.",
     "Passing tone and neighbor tone candidates are detected only from simple same-measure adjacent pitch motion.",
-    "Confidence for non-chord tone candidates is never high in MVP 3.15.",
+    "Confidence for non-chord tone candidates is never high in MVP 3.16.",
 ]
 
 ANALYSIS_VERSION = "3.11.0"
@@ -115,7 +116,7 @@ async def analyze_musicxml(file: UploadFile) -> MusicXMLAnalysisResponse:
     if not _looks_like_musicxml(file.filename):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Only .musicxml and .xml files are supported in MVP 3.15.",
+            detail="Only .musicxml and .xml files are supported in MVP 3.16.",
         )
 
     content = await file.read()
@@ -176,8 +177,10 @@ async def analyze_musicxml(file: UploadFile) -> MusicXMLAnalysisResponse:
             )
         )
 
+    timeline = build_notated_timeline(parsed_score.timeline_source) if parsed_score.timeline_source is not None else None
     return MusicXMLAnalysisResponse(
-        notated_timeline=build_notated_timeline(parsed_score.timeline_source) if parsed_score.timeline_source is not None else None,
+        notated_timeline=timeline,
+        notated_harmony=analyze_notated_harmony(timeline),
         file_name=file.filename or "uploaded.musicxml",
         measure_count=len(measures),
         analysis_version=ANALYSIS_VERSION,

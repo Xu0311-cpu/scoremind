@@ -2,6 +2,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 from app.schemas.timeline import NotatedTimeline
+from app.schemas.notated_harmony import NotatedHarmony
 
 
 ChordQuality = Literal[
@@ -199,6 +200,7 @@ class MeasureAnalysis(BaseModel):
 
 
 class MusicXMLAnalysisResponse(BaseModel):
+    notated_harmony: NotatedHarmony | None = Field(default=None, description="Independent versioned chord recognition over reliable sustained written pitches. Null means not computed; never changes legacy chord, Roman, function or note-role fields.")
     notated_timeline: NotatedTimeline | None = Field(
         default=None,
         description="Independent written-duration evidence. Null means not computed (including old payloads); empty lists mean computed with no events. Not used by legacy harmonic analysis.",
