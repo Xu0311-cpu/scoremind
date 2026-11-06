@@ -12,7 +12,9 @@ MVP 3.16 本地候选：默认读谱新增基于完整记谱持续音的三和�
 
 2026-11-06 用户在 **iPhone 17 / iOS 26.3 / Safari**、`b9bfc25` 上确认原始 `.musicxml` 选择与分析、上述 K.157 正反区间及可理解性、下一小节与谱面联动正常。本阶段聚焦 iOS Safari；**Android 延期、未验证，不作为本轮阻断**。这不代表全部真机矩阵通过；具体项目及剩余项见 [移动验证记录](docs/MOBILE_VALIDATION_3_15.md)。本次文案收尾将默认未知结果简化为“这里需要结合前后文判断，当前版本暂不能可靠确定和弦。”，技术原因保留在展开依据，不新增上下文推断，新文案尚待真机复测。
 
-本分支依赖尚未合并的 3.15 修复 `0aaf933`；PR #10 未合并。应用与模板解释版本 `3.16.0`，独立人工标注仍为 v1，上传仍仅 `.musicxml/.xml`。`b9bfc25` 已通过独立复审，本次收尾不改识别状态或置信度。
+用户同日追加确认标题首尾完整、横竖屏切换及新未知文案正常；以上三项更新此前待验状态，其余未测项仍保留，详见移动验证记录。Android 继续延期。
+
+3.15 修复 `0aaf933` 已经 PR #10 普通合并（`bbca84d`）；3.16 正按授权进入 PR #11 合并验收。应用与模板解释版本 `3.16.0`，独立人工标注仍为 v1，上传仍仅 `.musicxml/.xml`。`b9bfc25` 已通过独立复审，本次仅补验收文档，不改识别状态或置信度。
 
 The original MVP 3.15 handoff recorded 390px browser checks, not physical touch acceptance. The narrowly scoped iPhone feedback above is recorded separately; Android remains deferred and unverified. No additional analysis or input capability is introduced by this closeout.
 
