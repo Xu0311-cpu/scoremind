@@ -8,7 +8,7 @@ export default function SustainedHarmonyReading({ harmony, measureIndex, located
   located: boolean;
   locationReason: string | null;
 }) {
-  if (!harmony || harmony.schema_version !== "1" || harmony.status !== "available") {
+  if (!harmony || !["1", "2"].includes(harmony.schema_version) || !["available", "partial"].includes(harmony.status)) {
     return <p className="timeline-caution">{harmonySummary(harmony)}</p>;
   }
   if (!located || measureIndex === null) return <p className="timeline-caution">{locationReason || "当前书面小节尚未可靠定位，暂不关联结论。"}</p>;
@@ -24,6 +24,7 @@ export default function SustainedHarmonyReading({ harmony, measureIndex, located
         <details className="secondary-details">
           <summary>查看此区间依据</summary>
           <p>全曲区间 [{s.start},{s.end})；{s.status === "recognized" ? `根音间隔模式 [${s.interval_pattern.join(", ")}]` : s.reason_codes.map(harmonyReason).join("；")}</p>
+          {s.status === "skipped" && <p>本小节所有 part 均已隔离，不猜装饰音的演奏时值。原始受影响小节：{harmony.excluded_measures?.find((m) => m.measure_index === measureIndex)?.cause_measure_ids.join(", ") || "请查阅原诊断"}</p>}
           {s.reason_codes.length > 0 && <p>原始原因码：<code>{s.reason_codes.join(", ")}</code></p>}
           {s.status === "unknown" && <p>当前识别保留全部同时持续的记谱音，不自动排除额外音，也不使用前后文补推和弦。</p>}
           <ul className="harmony-source-list">{s.notes.map((n) => <li key={n.event_id}>

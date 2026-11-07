@@ -398,6 +398,7 @@ h3 {
 .harmony-interval p { margin: 5px 0; line-height: 1.5; }
 .harmony-interval.unknown > p { color: #785816; }
 .harmony-interval.silent { color: var(--muted); }
+.harmony-interval.skipped > p { border-left: 3px solid #a56916; padding-left: 10px; }
 .harmony-source-list { padding-left: 18px; overflow-wrap: anywhere; }
 .harmony-source-list > li { margin: 8px 0; font-size: 13px; }
 .harmony-source-list span { display: block; }

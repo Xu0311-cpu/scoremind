@@ -1,4 +1,4 @@
-"""Conservative chord recognition over complete, audited notated-duration slices."""
+"""Conservative chord recognition over audited, locally eligible written slices."""
 
 from fractions import Fraction
 
@@ -6,8 +6,8 @@ from music21 import chord as m21_chord, interval as m21_interval, pitch as m21_p
 
 from app.music.chord_analyzer import TRIAD_PATTERNS, SEVENTH_PATTERNS
 from app.music.timeline_observations import _written_height
-from app.schemas.notated_harmony import HarmonyNoteEvidence, NotatedHarmony, NotatedHarmonySlice
-from app.schemas.timeline import NotatedTimeline, TimelineDiagnostic
+from app.schemas.notated_harmony import HarmonyExclusion, HarmonyNoteEvidence, NotatedHarmony, NotatedHarmonySlice
+from app.schemas.timeline import NotatedTimeline, SourceNoteSegment, TimelineDiagnostic, TimelineMeasure
 
 
 PATTERNS = {**TRIAD_PATTERNS, **SEVENTH_PATTERNS}
@@ -55,9 +55,50 @@ class _IntervalSweep:
         return self.active
 
 
-def _validate(timeline: NotatedTimeline) -> dict[str, Fraction]:
-    _require(timeline.status == "complete", "timeline_not_complete")
-    _require(not timeline.diagnostics, "timeline_has_diagnostics")
+def _diagnostic_scope(timeline: NotatedTimeline, measures: dict[str, TimelineMeasure],
+                      sources: dict[str, SourceNoteSegment]) -> tuple[dict[int, set[str]], set[str]]:
+    _require(timeline.status in {"complete", "partial"}, "timeline_not_complete")
+    _require(timeline.status != "partial" or bool(timeline.diagnostics), "timeline_not_complete")
+    excluded: dict[int, set[str]] = {}
+    grace_ids: set[str] = set()
+    for d in timeline.diagnostics:
+        _require(d.code in {"grace_note_no_duration", "repeated_measure_number"}, "timeline_not_complete")
+        _require(bool(d.measure_ids) and all(mid in measures for mid in d.measure_ids), "diagnostic_location_unreliable")
+        _require(all(sid in sources and sources[sid].measure_id in d.measure_ids for sid in d.source_note_ids),
+                 "diagnostic_source_unreliable")
+        if d.code == "grace_note_no_duration":
+            for sid in d.source_note_ids:
+                n = sources[sid]
+                _require(n.duration == "0" and not n.tie and not n.notation_tie, "unsafe_grace_source")
+                grace_ids.add(sid)
+            for mid in d.measure_ids:
+                excluded.setdefault(measures[mid].measure_index, set()).add(mid)
+    return excluded, grace_ids
+
+
+def _expand_exclusions(timeline: NotatedTimeline, sources: dict[str, SourceNoteSegment],
+                       excluded: dict[int, set[str]]) -> dict[int, set[str]]:
+    # Union written measures once per tied source chain; closure is not a per-slice scan.
+    parents = {m.measure_index: m.measure_index for m in timeline.measures}
+
+    def root(index: int) -> int:
+        while parents[index] != index:
+            parents[index] = parents[parents[index]]
+            index = parents[index]
+        return index
+
+    for event in timeline.sustained_events:
+        indices = [sources[sid].measure_index for sid in event.source_note_ids]
+        for index in indices[1:]:
+            a, b = root(indices[0]), root(index)
+            parents[b] = a
+    causes: dict[int, set[str]] = {}
+    for index, mids in excluded.items():
+        causes.setdefault(root(index), set()).update(mids)
+    return {index: causes[root(index)] for index in parents if root(index) in causes}
+
+
+def _validate(timeline: NotatedTimeline) -> tuple[dict[str, Fraction], dict[int, set[str]]]:
     _require(timeline.pitch_basis == "written", "unsupported_pitch_basis")
     times: dict[str, Fraction] = {}
 
@@ -71,15 +112,20 @@ def _validate(timeline: NotatedTimeline) -> dict[str, Fraction]:
     events = {e.event_id: e for e in timeline.sustained_events}
     _require(len(measures) == len(timeline.measures) and len(sources) == len(timeline.source_notes)
              and len(events) == len(timeline.sustained_events), "duplicate_source_identity")
+    excluded, grace_ids = _diagnostic_scope(timeline, measures, sources)
     grids = {}
+    part_ids = {}
     measure_intervals = []
     for m in timeline.measures:
         _require(m.part_id is not None and m.measure_index > 0, "measure_identity_incomplete")
+        _require(m.part_index > 0 and part_ids.setdefault(m.part_index, m.part_id) == m.part_id,
+                 "measure_identity_incomplete")
         start, end = time(m.start), time(m.end)
         _require(end > start, "invalid_measure_interval")
         grids.setdefault(m.part_index, []).append((m.measure_index, start, end))
         measure_intervals.append((start, end, m.measure_id))
     reference = next(iter(grids.values()), [])
+    _require(len(set(part_ids.values())) == len(part_ids), "duplicate_part_identity")
     for grid in grids.values():
         _require(grid == reference, "inconsistent_measure_grid")
     cursor = Fraction(0)
@@ -91,15 +137,16 @@ def _validate(timeline: NotatedTimeline) -> dict[str, Fraction]:
         m = measures.get(n.measure_id)
         _require(m is not None, "source_measure_missing")
         _require(all((n.part_id, n.staff, n.voice, n.instrument_id)), "source_identity_incomplete")
-        _require(n.tie_safe, "unsafe_tie_source")
+        _require(n.tie_safe or n.note_id in grace_ids, "unsafe_tie_source")
         _require(n.part_id == m.part_id and n.part_index == m.part_index and n.measure_index == m.measure_index,
                  "source_measure_identity_mismatch")
         start, duration = time(n.start), time(n.duration)
         end = start + duration
-        _require(duration > 0 and time(m.start) <= start and end <= time(m.end)
+        _require((duration > 0 or n.note_id in grace_ids) and time(m.start) <= start and end <= time(m.end)
                  and start - time(m.start) == time(n.local_start), "source_interval_mismatch")
         _require(_written_height(n.pitch) is not None and m21_pitch.Pitch(n.pitch).octave == n.octave, "invalid_written_pitch")
-        source_intervals.append((start, end, n.note_id))
+        if duration > 0:
+            source_intervals.append((start, end, n.note_id))
     owned_sources = []
     event_intervals = []
     for e in timeline.sustained_events:
@@ -116,7 +163,8 @@ def _validate(timeline: NotatedTimeline) -> dict[str, Fraction]:
         _require(position == end and position > start, "event_interval_mismatch")
         owned_sources.extend(e.source_note_ids)
         event_intervals.append((start, end, e.event_id))
-    _require(len(owned_sources) == len(set(owned_sources)) and set(owned_sources) == set(sources), "source_event_ownership_mismatch")
+    _require(len(owned_sources) == len(set(owned_sources)) and set(owned_sources) == set(sources) - grace_ids,
+             "source_event_ownership_mismatch")
     event_sweep = _IntervalSweep(event_intervals)
     source_sweep = _IntervalSweep(source_intervals)
     measure_sweep = _IntervalSweep(measure_intervals)
@@ -133,7 +181,7 @@ def _validate(timeline: NotatedTimeline) -> dict[str, Fraction]:
         expected_measures = measure_sweep.at(start, end, "slice_measure_mismatch")
         _require(expected_measures == set(s.measure_ids) and len(s.measure_ids) == len(grids), "slice_measure_mismatch")
     _require(position == cursor, "incomplete_slice_partition")
-    return times
+    return times, _expand_exclusions(timeline, sources, excluded)
 
 
 def _recognize(result: NotatedHarmonySlice) -> None:
@@ -179,7 +227,7 @@ def analyze_notated_harmony(timeline: NotatedTimeline | None) -> NotatedHarmony 
         return None
     result = NotatedHarmony(status="available")
     try:
-        times = _validate(timeline)
+        times, excluded = _validate(timeline)
     except (UnsafeTimeline, ValueError) as exc:
         code = str(exc) if isinstance(exc, UnsafeTimeline) else "invalid_timeline_time_or_pitch"
         result.status = "unavailable"
@@ -187,6 +235,20 @@ def analyze_notated_harmony(timeline: NotatedTimeline | None) -> NotatedHarmony 
         return result
     events = {e.event_id: e for e in timeline.sustained_events}
     measures = {m.measure_id: m for m in timeline.measures}
+    grouped_measures: dict[int, list[str]] = {}
+    for m in timeline.measures:
+        grouped_measures.setdefault(m.measure_index, []).append(m.measure_id)
+    if excluded:
+        result.status = "partial"
+    result.diagnostics = list(timeline.diagnostics)
+    for index, causes in sorted(excluded.items()):
+        direct = any(measures[mid].measure_index == index for mid in causes)
+        result.excluded_measures.append(HarmonyExclusion(
+            measure_index=index, measure_ids=grouped_measures[index],
+            reason_codes=["grace_measure_isolated" if direct else "tied_dependency_isolated"],
+            cause_measure_ids=sorted(causes),
+        ))
+    exclusions = {e.measure_index: e for e in result.excluded_measures}
     source_events = {sid: e.event_id for e in timeline.sustained_events for sid in e.source_note_ids}
     for index, s in enumerate(timeline.slices, 1):
         measure = measures[s.measure_ids[0]]
@@ -206,6 +268,10 @@ def analyze_notated_harmony(timeline: NotatedTimeline | None) -> NotatedHarmony 
                 source_note_ids=fragments[eid],
                 event_source_note_ids=event.source_note_ids, event_start=event.start, event_end=event.end,
             ))
-        _recognize(item)
+        if measure.measure_index in exclusions:
+            item.status = "skipped"
+            item.reason_codes = exclusions[measure.measure_index].reason_codes
+        else:
+            _recognize(item)
         result.slices.append(item)
     return result

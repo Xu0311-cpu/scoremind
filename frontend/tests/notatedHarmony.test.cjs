@@ -91,3 +91,48 @@ test("empty and old responses are explicit, and unavailable timelines never rend
   const empty = renderToStaticMarkup(React.createElement(Reading, { harmony: { ...harmony, slices: [] }, measureIndex: 1, located: true, locationReason: null }));
   assert.match(empty, /没有持续音分析区间/);
 });
+
+test("v2 partial reader separates recognized unknown and skipped without inventing silence", () => {
+  const data = { ...harmony, schema_version: "2", analyzer_version: "3.17.0", status: "partial",
+    excluded_measures: [{ measure_index: 2, measure_ids: ["p1:m2", "p2:m2"], reason_codes: ["grace_measure_isolated"], cause_measure_ids: ["p1:m2"] }],
+    slices: [slice, { ...slice, slice_id: "skip", measure_index: 2, status: "skipped", root: null, quality: null, bass: null, inversion: null, reason_codes: ["grace_measure_isolated"] },
+      { ...slice, slice_id: "unk", measure_index: 3, status: "unknown", root: null, reason_codes: ["unsupported_pitch_set"] },
+      { ...slice, slice_id: "rest", measure_index: 4, status: "silent", notes: [] }],
+  };
+  const summary = helpers.harmonySummary(data);
+  assert.match(summary, /已分析 3 片、跳过 1 片/);
+  assert.match(summary, /1 片已识别、1 片识别未知、1 片记谱静默/);
+  const before = JSON.stringify(data);
+  const html = (index) => renderToStaticMarkup(React.createElement(Reading, { harmony: data, measureIndex: index, located: true, locationReason: null }));
+  assert.match(html(1), /C 大三和弦/);
+  assert.match(html(2), /输入受影响，本区间未计算/);
+  assert.match(html(2), /装饰音/);
+  assert.doesNotMatch(html(2), /C 大三和弦|此区间为记谱静默|这里需要结合前后文判断/);
+  assert.match(html(2), /p1:m2/);
+  assert.match(html(3), /这里需要结合前后文判断/);
+  assert.match(html(4), /此区间为记谱静默/);
+  const report = helpers.notatedHarmonyReport("k80.musicxml", "3.11.0", data, "3.17.0");
+  assert.match(report, /已分析 3 片、跳过 1 片/);
+  assert.match(report, /书面第 2 小节/);
+  assert.match(report, /输入受影响，本区间未计算/);
+  assert.match(report, /全部 part：p1:m2, p2:m2/);
+  assert.match(report, /原始受影响位置：p1:m2/);
+  assert.equal(JSON.stringify(data), before);
+});
+
+test("v2 isolation dependency is a short input warning, not a harmony verdict", () => {
+  const skipped = { ...slice, status: "skipped", reason_codes: ["tied_dependency_isolated"] };
+  assert.match(helpers.harmonySliceSentence(skipped), /跨小节延音依赖/);
+  assert.doesNotMatch(helpers.harmonySliceSentence(skipped), /C 大三和弦|原位|静默/);
+  const blocked = renderToStaticMarkup(React.createElement(Reading, { harmony: { ...harmony, schema_version: "2", status: "partial" }, measureIndex: 1, located: false, locationReason: "来源不可靠" }));
+  assert.match(blocked, /来源不可靠/);
+  assert.doesNotMatch(blocked, /C 大三和弦/);
+});
+
+test("v1 report remains usable and unsupported future versions do not borrow slice conclusions", () => {
+  assert.match(helpers.notatedHarmonyReport("old.xml", "3.11.0", harmony, null), /C 大三和弦/);
+  const future = { ...harmony, schema_version: "99" };
+  const html = renderToStaticMarkup(React.createElement(Reading, { harmony: future, measureIndex: 1, located: true, locationReason: null }));
+  assert.match(html, /格式版本暂不受支持/);
+  assert.doesNotMatch(html, /C 大三和弦/);
+});

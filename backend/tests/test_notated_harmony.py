@@ -136,15 +136,12 @@ def test_tied_chord_chain_and_rearticulation_never_compress_away_evidence():
     assert {n["event_id"] for n in replay[0]["notes"]}.isdisjoint({n["event_id"] for n in replay[1]["notes"]})
 
 
-@pytest.mark.parametrize("name", ["timeline_broken_ties.musicxml", "timeline_staff_transpose.musicxml", "timeline_zero_duration.musicxml", "timeline_meter_tuplets.musicxml", "timeline_misaligned_parts.musicxml", "professional/mozart_k80_opening.musicxml", "simple_chords.musicxml"])
+@pytest.mark.parametrize("name", ["timeline_broken_ties.musicxml", "timeline_staff_transpose.musicxml", "timeline_zero_duration.musicxml", "timeline_misaligned_parts.musicxml", "simple_chords.musicxml"])
 def test_unsafe_or_incomplete_inputs_have_no_harmony_claims(name):
     data = upload(name)
     h = data["notated_harmony"]
     assert h["status"] == "unavailable" and h["slices"] == []
     assert h["diagnostics"]
-    if name == "timeline_meter_tuplets.musicxml":
-        assert [m["measure_index"] for m in data["measures"]] == [1, 2, 3]
-        assert [m["measure_number"] for m in data["measures"]] == [0, 1, 1]
 
 
 def test_sources_and_fractions_are_stable_and_resolvable():
@@ -160,16 +157,19 @@ def test_sources_and_fractions_are_stable_and_resolvable():
             assert all(sid in sources and sources[sid]["pitch"] == n["pitch"] for sid in n["source_note_ids"])
 
 
-def test_repeated_display_numbers_preserve_positions_and_refuse_partial_timeline():
+def test_repeated_display_numbers_preserve_positions_after_full_grid_validation():
     root = ET.fromstring((FIXTURES / "notated_harmony_inversions.musicxml").read_bytes())
     for measure in root.findall("part/measure"):
         measure.set("number", "1")
     repeated = upload("repeated.musicxml", ET.tostring(root))
     assert repeated["notated_timeline"]["status"] == "partial"
     assert {d["code"] for d in repeated["notated_timeline"]["diagnostics"]} == {"repeated_measure_number"}
-    assert repeated["notated_harmony"]["status"] == "unavailable"
-    assert repeated["notated_harmony"]["slices"] == []
-    assert repeated["notated_harmony"]["diagnostics"][0]["code"] == "timeline_not_complete"
+    assert repeated["notated_harmony"]["status"] == "available"
+    assert repeated["notated_harmony"]["schema_version"] == "2"
+    assert repeated["notated_harmony"]["excluded_measures"] == []
+    assert {s["measure_index"] for s in repeated["notated_harmony"]["slices"]} == set(range(1, 12))
+    assert repeated["notated_harmony"]["slices"][0]["root"] == "C"
+    assert next(s for s in repeated["notated_harmony"]["slices"] if s["measure_index"] == 2)["inversion"] == 1
     assert [m["measure_number"] for m in repeated["measures"]] == [1] * 11
     assert [m["measure_index"] for m in repeated["measures"]] == list(range(1, 12))
     assert len({m["measure_id"] for m in repeated["notated_timeline"]["measures"]}) == 11
@@ -189,7 +189,7 @@ def test_missing_new_field_keeps_old_explanation_compatible_and_new_sections_are
     data = upload("professional/mozart_k157_opening.musicxml")
     new = client.post("/api/v1/explain/analysis", json={"analysis": data})
     assert new.status_code == 200
-    assert new.json()["notated_harmony_version"] == "3.16.0"
+    assert new.json()["notated_harmony_version"] == "3.17.0"
     section = new.json()["sections"][0]
     assert "[2,5/2)" in section["text"] and "C 大三和弦" in section["text"] and "此前延续音 G3" in section["text"]
     assert "罗马数字" not in section["text"]
