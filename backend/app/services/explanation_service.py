@@ -7,11 +7,11 @@ from app.schemas.explanation import ExplanationResponse, ExplanationSection
 from app.schemas.notated_harmony import NotatedHarmony
 
 
-EXPLANATION_VERSION = "3.16.0"
+EXPLANATION_VERSION = "3.17.0"
 HARMONY_EXCERPT_LIMIT = 8
 EXPLANATION_WARNINGS = [
     "This explanation is template-generated from deterministic analysis output.",
-    "No LLM is called in MVP 3.16.",
+    "No LLM is called in MVP 3.17.",
     "Future LLM providers must not infer new music-theory conclusions.",
 ]
 
@@ -42,8 +42,10 @@ class TemplateExplanationProvider:
         if harmony is not None:
             recognized = sum(s.status == "recognized" for s in harmony.slices)
             summary = (f"记谱持续音模块 {harmony.analyzer_version} 在 {len(harmony.slices)} 个时间片中识别了 {recognized} 个区间；区间数不是独立和弦个数。"
-                       if harmony.status == "available" else "记谱持续音识别不可用：" + "、".join(d.code for d in harmony.diagnostics) + "。")
-            if harmony.status == "available" and len(harmony.slices) > HARMONY_EXCERPT_LIMIT:
+                       if harmony.status in {"available", "partial"} else "记谱持续音识别不可用：" + "、".join(d.code for d in harmony.diagnostics) + "。")
+            if harmony.status in {"available", "partial"}:
+                summary += " " + _harmony_availability_text(harmony)
+            if harmony.status in {"available", "partial"} and len(harmony.slices) > HARMONY_EXCERPT_LIMIT:
                 summary += " " + _harmony_excerpt_notice(harmony)
             return ExplanationResponse(
                 analysis_version=analysis.analysis_version, notated_harmony_version=harmony.analyzer_version,
@@ -85,6 +87,16 @@ def _harmony_excerpt_notice(harmony: NotatedHarmony) -> str:
             f"其余 {total - HARMONY_EXCERPT_LIMIT} 个时间片未展开。完整结果请按小节查看读谱或学习报告。")
 
 
+def _harmony_availability_text(harmony: NotatedHarmony) -> str:
+    skipped = sum(s.status == "skipped" for s in harmony.slices)
+    unknown = sum(s.status == "unknown" for s in harmony.slices)
+    silent = sum(s.status == "silent" for s in harmony.slices)
+    text = f"已分析 {len(harmony.slices) - skipped} 片，跳过 {skipped} 片；已分析中识别未知 {unknown} 片、记谱静默 {silent} 片。跳过不是无和声或判断错误。"
+    if harmony.excluded_measures:
+        text += " 隔离书面小节：" + "、".join(str(m.measure_index) for m in harmony.excluded_measures) + "（装饰音无记谱时值或跨小节延音依赖）。"
+    return text
+
+
 def _notated_harmony_text(analysis: MusicXMLAnalysisResponse) -> str:
     harmony = analysis.notated_harmony
     if harmony.status == "unavailable":
@@ -102,6 +114,8 @@ def _notated_harmony_text(analysis: MusicXMLAnalysisResponse) -> str:
             lines.append(f"{location}：{s.root} {quality_names[s.quality]}，{inversions[s.inversion]}；最低记谱音 {s.bass}，包含 {'、'.join(s.pitch_classes)}，此前延续音 {continued}。")
         elif s.status == "silent":
             lines.append(f"{location}：记谱静默。")
+        elif s.status == "skipped":
+            lines.append(f"{location}：输入受影响，本区间未计算（装饰音无记谱时值或跨小节延音依赖；{'、'.join(s.reason_codes)}）。")
         else:
             lines.append(f"{location}：暂不能识别，原因 {'、'.join(s.reason_codes)}；保留全部音 {'、'.join(n.pitch for n in s.notes)}。")
     return " ".join(lines) if lines else "已计算，但没有持续音时间片。"

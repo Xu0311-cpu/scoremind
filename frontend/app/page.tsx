@@ -844,7 +844,7 @@ export default function Home() {
       <section className="workspace">
         <header className="page-header">
           <div>
-            <p className="eyebrow">MVP 3.16</p>
+            <p className="eyebrow">MVP 3.17</p>
             <h1>ScoreMind</h1>
             <p className="product-subtitle">AI Music Score Understanding</p>
           </div>
@@ -950,11 +950,13 @@ export default function Home() {
               </div>
               <div>
                 <dt>已识别区间数</dt>
-                <dd>{analysis.notated_harmony?.status === "available" ? analysis.notated_harmony.slices.filter((s) => s.status === "recognized").length : "不可分析"}</dd>
+                <dd>{analysis.notated_harmony && ["available", "partial"].includes(analysis.notated_harmony.status) ? analysis.notated_harmony.slices.filter((s) => s.status === "recognized").length : "不可分析"}</dd>
               </div>
               <div>
                 <dt>未知区间数</dt>
-                <dd>{analysis.notated_harmony?.status === "available" ? analysis.notated_harmony.slices.filter((s) => s.status === "unknown").length : "不可分析"}</dd>
+                <dd>{analysis.notated_harmony && ["available", "partial"].includes(analysis.notated_harmony.status) ? analysis.notated_harmony.slices.filter((s) => s.status === "unknown").length : "不可分析"}
+                  {analysis.notated_harmony?.status === "partial" && <span className="summary-subtext">另有 {analysis.notated_harmony.slices.filter((s) => s.status === "skipped").length} 片因输入受影响未计算，不计入未知</span>}
+                </dd>
               </div>
               <div>
                 <dt>音高与时间</dt>

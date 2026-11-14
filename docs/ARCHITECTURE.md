@@ -34,7 +34,19 @@ The backend does not accept PDFs or images in the current MVP.
 
 ## Analysis Pipeline
 
-### MVP 3.16 独立记谱持续音和弦
+### MVP 3.17 局部可用性（当前）
+
+仍由 `notated_harmony.py` 在旧路由后独立计算，不改 parser、timeline、旧 chord/key/Roman/note/NCT。`schema_version=2`、`analyzer_version=3.17.0`；旧 v1 JSON 无 `excluded_measures` 时缺省为空，解释服务和前端都继续接受 v1。旧 `analysis_version=3.11.0` 与人工包 v1 不变。
+
+先按白名单核对诊断及所有引用：只允许有可靠小节定位的 `grace_note_no_duration` 与 `repeated_measure_number`。grace 所指音符必须零时值且无 tie；其余零时值、移调、其他诊断或缺定位整份拒绝。随后对全谱（包括将跳过的小节）核对来源身份、正时值、精确累计网格、事件完整所有权和分片活动集合。grace 原片段保留在原 timeline 中，但不能进入活动事件，不猜演奏时值。原 `partial` 不会被改成 complete。
+
+grace 先隔离同一书面索引的所有 part；以持续事件完整来源链连接书面小节，使用并查集求跨小节 tie 依赖闭包。保守隔离整个连通分量（即使 tie 本身安全），避免后继片段绕过受影响来源。无关同音重奏不连接。重复显示编号只有在完整网格与身份验证后才放行，编号不作为身份。
+
+整体 `available/partial/unavailable` 与逐片 `recognized/unknown/silent/skipped` 分开。`skipped` 不调用和弦匹配，根音、性质、低音、转位为空；仍有精确区间、当前来源和完整事件链。`excluded_measures` 给出书面索引、所有 part 小节 ID、原因码和原始受影响位置；原诊断引用保留且可回溯。不可定位/坏结构仍整份 unavailable，不返回悬空诊断引用。
+
+原 `_recognize` 不变。请求内 Fraction 缓存、来源/事件/小节边界扫描保留，局部隔离计算在扫描外完成，不按时间片重扫全谱。默认读谱、摘要、解释和报告分别统计已分析、跳过及识别未知；跳过不是静默、判断错误或准确率。既有盲态闸门、专家数据键及导航映射不改。详细规则与验证见 [`LOCAL_HARMONY_VALIDATION.md`](LOCAL_HARMONY_VALIDATION.md)。
+
+### MVP 3.16 独立记谱持续音和弦（历史 v1；局部范围由上节 v2 扩展）
 
 路由只组装 `timeline = build_notated_timeline(...)` 后调用 `analyze_notated_harmony(timeline)`。新契约位于 `schemas/notated_harmony.py`：`notated_harmony` 可选/null 表示未计算，格式 `schema_version=1`，模块 `analyzer_version=3.16.0`；旧 `analysis_version=3.11.0` 继续表示旧起音检测及其标签，旧 ExpertReview 键不升级。`available` 的空/静默结果与 `unavailable` 的拒绝分析不同。
 

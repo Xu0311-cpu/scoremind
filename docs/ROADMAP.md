@@ -1,15 +1,16 @@
 # Roadmap
 
-This roadmap describes future work. Items listed here are not current MVP 3.16 capabilities unless explicitly implemented elsewhere.
+This roadmap describes future work. Items listed here are not current MVP 3.17 capabilities unless explicitly implemented elsewhere.
 
 ## Validation In Progress
 
-- MVP 3.16 合并验收：完整记谱持续音集合的独立和弦识别 v1，默认读谱/解释/报告按来源展示；K.157 两个指定区间的预期在实现前固定。`b9bfc25` 已通过独立复审，`2bbcd71` 远端 CI 成功；依赖的 3.15 修复已普通合并为 `bbca84d`。本次仅补用户验收记录，待新提交 CI 后按明确授权合并 PR #11，不宣称总体准确率。见 [`SUSTAINED_HARMONY_VALIDATION.md`](SUSTAINED_HARMONY_VALIDATION.md)。
-  复审加固已本地验证：来源边界扫描与请求内分数缓存、解释节选范围/省略数量提示；复杂长谱、响应体积和多用户并发仍需后续验证，不扩大本轮乐理范围。
+- MVP 3.17 本地候选：只对可定位的无时值 grace 隔离书面小节并扩大 tie 依赖范围；其余位置先验证全谱网格与来源再识别。v2 区分已分析/跳过/未知，原 timeline partial 和旧路径不改。规则与固定 K.80 预期见 [`LOCAL_HARMONY_VALIDATION.md`](LOCAL_HARMONY_VALIDATION.md)。待独立复审，不推送、不建 PR、不合并，不计算总体准确率。
 
 - 移动验收本阶段聚焦 **iOS Safari**：2026-11-06 用户在 iPhone 17 / iOS 26.3 / Safari、`b9bfc25` 上确认原始 `.musicxml` 选择及分析、K.157 正反区间与可理解性、下一小节谱面联动；同日文案收尾后追加确认标题首尾完整、横竖屏切换与新未知文案正常。JSON 往返及其余未测矩阵仍待验，不宣称全部通过。**Android 延期、未验证，不作为本轮阻断。** 无新乐理或上传格式能力；详见 [`MOBILE_VALIDATION_3_15.md`](MOBILE_VALIDATION_3_15.md)。
 
 ## Current / Completed
+
+- MVP 3.16：PR #11 已普通合并为 `c80448c`，依赖的 3.15 修复 PR #10 合并为 `bbca84d`。持续音识别 v1、K.157 固定正反例、边界扫描与分数缓存、解释节选范围均已交付；复杂长谱、响应体积及并发仍待后续验证。历史记录见 [`SUSTAINED_HARMONY_VALIDATION.md`](SUSTAINED_HARMONY_VALIDATION.md)。
 
 - MVP 3.14: 页面内按书面小节比较未保存人工标注与已存记录；换谱、Reset、导入覆盖先确认，离页仅在脏态启用浏览器原生提醒。未保存字段不进入 v1 JSON 或进度；移动端离页提醒不保证触发。
 - MVP 3.13: 对独立人工和声标注按书面小节索引筛选与前后跳转；未标注位置、`unclear`、`partial`、`determined` 及两种填写基准分别计数。计数只描述人工记录状态，不是准确率、完整覆盖或经验证的专业标准；不改变 v1 JSON 与后端乐理分析。
@@ -42,7 +43,7 @@ This roadmap describes future work. Items listed here are not current MVP 3.16 c
 ## Mid Term
 
 - Strengthen note-level analysis while remaining conservative.
-- 在独立验证后扩大持续音识别适用范围：对称根音集合、可靠的非和弦音处理与 partial 时间轴的局部可用性均属后续工作；旧和声/音符路径继续使用起音集合及小节内前序上下文。
+- 在独立验证后扩大持续音识别适用范围：对称根音集合、可靠的非和弦音处理和更多诊断类型仍属后续工作。3.17 候选仅扩展已定位 grace/重复编号范围；旧和声/音符路径继续使用起音集合及小节内前序上下文。
 - Extend explicit support for cross-staff ties, asymmetric part grids, grace timing, concert-pitch conversion, and performance/repeat semantics only after separate validation.
 - Expand supported chord and Roman numeral cases.
 - Add more robust confidence and warning signals.

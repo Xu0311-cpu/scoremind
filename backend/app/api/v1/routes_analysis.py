@@ -96,7 +96,7 @@ MVP_WARNINGS = [
     "A non_chord_tone role means the note is not part of the selected chord context; it is not full classical non-chord tone classification.",
     "Non-chord tone candidate labels are conservative learning hints, not definitive music-theory conclusions.",
     "Passing tone and neighbor tone candidates are detected only from simple same-measure adjacent pitch motion.",
-    "Confidence for non-chord tone candidates is never high in MVP 3.16.",
+    "Confidence for non-chord tone candidates is never high in MVP 3.17.",
 ]
 
 ANALYSIS_VERSION = "3.11.0"
@@ -116,7 +116,7 @@ async def analyze_musicxml(file: UploadFile) -> MusicXMLAnalysisResponse:
     if not _looks_like_musicxml(file.filename):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Only .musicxml and .xml files are supported in MVP 3.16.",
+            detail="Only .musicxml and .xml files are supported in MVP 3.17.",
         )
 
     content = await file.read()
